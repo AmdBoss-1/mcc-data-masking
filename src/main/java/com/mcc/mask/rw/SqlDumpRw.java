@@ -3,6 +3,7 @@ package com.mcc.mask.rw;
 import com.mcc.mask.MaskException;
 import com.mcc.mask.scan.TextScanner;
 import com.mcc.mask.util.AtomicWrite;
+import com.mcc.mask.util.TextCodec;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,10 +22,11 @@ public final class SqlDumpRw implements Rw {
     @Override
     public RwResult process(Path in, Path out, Ctx ctx) {
         try {
-            String text = Files.readString(in, StandardCharsets.UTF_8);
+            TextCodec.Decoded d = TextCodec.read(in);
+            String text = d.text();
             TextScanner s = new TextScanner(ctx.rules(), ctx.book());
             TextScanner.ScanResult r = ctx.reverse() ? s.unmaskText(text) : s.maskText(text);
-            AtomicWrite.write(out, r.text().getBytes(StandardCharsets.UTF_8));
+            AtomicWrite.write(out, d.encode(r.text()));
             return new RwResult(r.hits(), r.warnings());
         } catch (IOException e) {
             throw new MaskException("SQL 处理失败: " + in + " — " + e.getMessage(), e);

@@ -2,9 +2,9 @@ package com.mcc.mask.rw;
 
 import com.mcc.mask.scan.TextScanner;
 import com.mcc.mask.util.AtomicWrite;
+import com.mcc.mask.util.TextCodec;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -20,7 +20,9 @@ public final class CsvRw implements Rw {
     @Override
     public RwResult process(Path in, Path out, Ctx ctx) {
         try {
-            List<String> lines = Files.readAllLines(in, StandardCharsets.UTF_8);
+            TextCodec.Decoded d = TextCodec.read(in);
+            byte[] raw = Files.readAllBytes(in);
+            List<String> lines = splitLines(d.text());
             TextScanner s = new TextScanner(ctx.rules(), ctx.book());
             int hits = 0;
             java.util.List<String> warnings = new java.util.ArrayList<>();
@@ -52,10 +54,9 @@ public final class CsvRw implements Rw {
                 }
                 sb.append(CsvUtil.join(cells)).append('\n');
             }
-            byte[] bytes = sb.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = d.encode(sb.toString());
             // 与原文件行尾一致性：原文件末行无换行则去掉多出的一个
-            byte[] orig = Files.readAllBytes(in);
-            if (orig.length > 0 && orig[orig.length - 1] != '\n' && bytes.length > 0 && bytes[bytes.length - 1] == '\n') {
+            if (raw.length > 0 && raw[raw.length - 1] != '\n' && bytes.length > 0 && bytes[bytes.length - 1] == '\n') {
                 bytes = java.util.Arrays.copyOf(bytes, bytes.length - 1);
             }
             AtomicWrite.write(out, bytes);
@@ -63,5 +64,23 @@ public final class CsvRw implements Rw {
         } catch (IOException e) {
             throw new com.mcc.mask.MaskException("CSV 处理失败: " + in + " — " + e.getMessage(), e);
         }
+    }
+
+    /** 拆行（不丢空行、不残留 \r）：写回时按 \n 统一重建，与原行为一致。 */
+    private static List<String> splitLines(String text) {
+        String t = text;
+        if (t.endsWith("\r\n")) {
+            t = t.substring(0, t.length() - 2);
+        } else if (t.endsWith("\n")) {
+            t = t.substring(0, t.length() - 1);
+        }
+        List<String> out = new java.util.ArrayList<>();
+        for (String l : t.split("\n", -1)) {
+            out.add(l.endsWith("\r") ? l.substring(0, l.length() - 1) : l);
+        }
+        if (out.size() == 1 && out.get(0).isEmpty()) {
+            out.clear();
+        }
+        return out;
     }
 }
