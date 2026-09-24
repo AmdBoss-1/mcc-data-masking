@@ -20,6 +20,10 @@ java -jar dist/mcc-mask.jar purge --book mb                                # 用
 
 批处理免交互：加 `--pass-file 口令文件`（该文件权限自管，不进 git）。
 
+## 下一步：网页控制台（设计中，待用户审 spec）
+
+引擎已有 CLI，缺 UI。网页控制台 v1 设计正本：`项目群文档中心\08-项目设计\MCC脱敏工具-网页控制台-v1设计-20260924.md`——本机 `127.0.0.1:8098`、JDK 自带 HttpServer 零新依赖、批量+对照表、工作目录与临时上传双轨、口令只存内存且刷新即锁。**不改引擎**，新增 `web` 包三类（WebServer / Api / Workspace）。审过才排实施计划。
+
 ## 能力与已知边界
 
 - **格式**：xlsx / xls / docx / doc / pptx / ppt / csv / txt·log·md / SQL dump / H2 `.mv.db`（均为双向）
