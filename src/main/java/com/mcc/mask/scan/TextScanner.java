@@ -112,9 +112,10 @@ public final class TextScanner {
         return new ScanResult(out, hits, List.of());
     }
 
-    /** 表格单元格：列名命中→整格变换；结构化规则要求值形匹配，不匹配退回文本扫描。 */
+    /** 表格单元格：列名命中→整格变换（查表大小写不敏感）；结构化规则要求值形匹配，不匹配退回文本扫描。 */
     public ScanResult maskCell(String column, String value) {
-        String ruleId = rules.columnRules().get(column == null ? "" : column.trim());
+        String key = column == null ? "" : column.trim().toLowerCase(java.util.Locale.ROOT);
+        String ruleId = rules.columnRules().get(key);
         if (ruleId == null || value == null || value.isEmpty()) {
             return maskText(value == null ? "" : value);
         }

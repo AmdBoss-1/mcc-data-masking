@@ -13,7 +13,11 @@
     "电话": "phone", "手机": "phone",
     "车牌": "plate",
     "邮箱": "email",
-    "税号": "taxno", "统一社会信用代码": "taxno", "身份证号": "idcard"
+    "税号": "taxno", "统一社会信用代码": "taxno", "身份证号": "idcard",
+    "plate": "plate", "customer": "factory", "supplier": "factory", "factory": "factory",
+    "workshop": "factory", "contact": "name", "driver": "name", "name": "name",
+    "phone": "phone", "mobile": "phone", "address": "address", "email": "email",
+    "taxno": "taxno", "idcard": "idcard"
   },
   "credentials": ["下载码", "客户码", "私钥", "password", "passwd", "secret", "token"]
 }

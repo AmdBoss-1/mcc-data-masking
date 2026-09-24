@@ -30,6 +30,10 @@ public final class RwFactory {
         REG.put(".pptx", new PptxRw());
         REG.put(".doc", new DocRw());
         REG.put(".ppt", new PptRw());
+        H2Rw h2 = new H2Rw();
+        REG.put(".mv.db", h2);
+        REG.put(".mccbak", h2);
+        REG.put(".sql", new SqlDumpRw());
     }
 
     /** 后续任务注册新读写器（T8-T12）。 */
@@ -39,6 +43,12 @@ public final class RwFactory {
 
     public static Rw byPath(Path p) {
         String n = p.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (n.endsWith(".mv.db")) {
+            Rw h2 = REG.get(".mv.db");
+            if (h2 != null) {
+                return h2;
+            }
+        }
         int dot = n.lastIndexOf('.');
         String ext = dot < 0 ? "" : n.substring(dot);
         Rw rw = REG.get(ext);
