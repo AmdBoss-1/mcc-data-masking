@@ -49,7 +49,7 @@ public final class DocRw implements Rw {
         }
     }
 
-    static String extractText(Path docFile) throws IOException {
+    public static String extractText(Path docFile) throws IOException {
         try (InputStream is = Files.newInputStream(docFile); HWPFDocument doc = new HWPFDocument(is)) {
             return doc.getRange().text();
         }

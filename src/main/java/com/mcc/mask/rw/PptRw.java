@@ -73,7 +73,7 @@ public final class PptRw implements Rw {
     }
 
     /** 重新打开产物提取全文（自验用）。 */
-    static String extractText(Path pptx) throws IOException {
+    public static String extractText(Path pptx) throws IOException {
         StringBuilder sb = new StringBuilder();
         try (InputStream is = Files.newInputStream(pptx); HSLFSlideShow ppt = new HSLFSlideShow(is)) {
             for (HSLFSlide slide : ppt.getSlides()) {

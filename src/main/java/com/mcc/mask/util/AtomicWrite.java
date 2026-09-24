@@ -13,7 +13,10 @@ public final class AtomicWrite {
     public static void write(Path out, byte[] data) {
         Path tmp = out.resolveSibling(out.getFileName() + ".tmp");
         try {
-            Files.createDirectories(out.getParent());
+            Path parent = out.toAbsolutePath().getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             Files.write(tmp, data);
             try {
                 Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);

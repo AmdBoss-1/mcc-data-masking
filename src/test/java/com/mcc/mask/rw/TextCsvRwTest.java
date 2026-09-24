@@ -54,6 +54,20 @@ class TextCsvRwTest {
     }
 
     @Test
+    void atomicWriteHandlesBareRelativePath(@TempDir Path dir) throws Exception {
+        // 回归：真跑 CLI 时输出常是相对裸文件名（getParent()==null 曾 NPE）
+        Path cwd = Path.of("").toAbsolutePath();
+        Path probe = Path.of("mask-rel-probe.tmp");
+        try {
+            com.mcc.mask.util.AtomicWrite.write(probe, new byte[] {1, 2, 3});
+            assertTrue(Files.exists(cwd.resolve("mask-rel-probe.tmp")));
+        } finally {
+            Files.deleteIfExists(cwd.resolve("mask-rel-probe.tmp"));
+        }
+        assertTrue(dir.toString().length() > 0);
+    }
+
+    @Test
     void unknownExtFailsWithHint(@TempDir Path dir) throws Exception {
         Path x = dir.resolve("f.xyz");
         Files.writeString(x, "abc");
