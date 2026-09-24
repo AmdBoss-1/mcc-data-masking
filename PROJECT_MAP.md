@@ -4,7 +4,7 @@
 
 ## 状态
 
-🟡 设计完成、待实施。设计文档：`docs/superpowers/specs/2026-09-24-data-masking-design.md`（**接手先读它**）。
+🟡 设计完成、待实施。设计文档（**群级正本**）：`项目群文档中心\08-项目设计\MCC脱敏工具-v1设计-20260924.md`（**接手先读它**）。
 
 ## 形态与位置
 
@@ -18,7 +18,7 @@
 MCC脱敏工具/
 ├─ PROJECT_MAP.md            ← 本文件
 ├─ docs/
-│  ├─ superpowers/specs/     ← 设计文档（brainstorming 产出）
+│  ├─ (设计文档正本在群级)  → 项目群文档中心\08-项目设计\MCC脱敏工具-v1设计-20260924.md
 │  └─ log/变更日志.md         ← 项目级记账
 ├─ src/                      ← 实施期创建（cli / rw / rules / codebook 四组件）
 └─ pom.xml                   ← 实施期创建
