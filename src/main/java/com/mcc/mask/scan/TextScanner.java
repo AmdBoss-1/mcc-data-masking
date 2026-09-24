@@ -80,11 +80,16 @@ public final class TextScanner {
         return new ScanResult(out, hits, List.of());
     }
 
-    /** 表格单元格：列名命中→整格变换；否则走 maskText。 */
+    /** 表格单元格：列名命中→整格变换；结构化规则要求值形匹配，不匹配退回文本扫描。 */
     public ScanResult maskCell(String column, String value) {
         String ruleId = rules.columnRules().get(column == null ? "" : column.trim());
         if (ruleId == null || value == null || value.isEmpty()) {
             return maskText(value == null ? "" : value);
+        }
+        for (RuleTable.StructRule sr : rules.structRules()) {
+            if (sr.id().equals(ruleId) && !sr.pattern().matcher(value).matches()) {
+                return maskText(value); // 列名说该是车牌但值不是车牌形：不硬套
+            }
         }
         Transformer t = rules.transformerFor(ruleId);
         String rid = ruleId;

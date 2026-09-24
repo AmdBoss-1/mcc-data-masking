@@ -22,6 +22,10 @@ public final class RwFactory {
         REG.put(".md", text);
         CsvRw csv = new CsvRw();
         REG.put(".csv", csv);
+        XlsxRw xlsx = new XlsxRw();
+        REG.put(".xlsx", xlsx);
+        REG.put(".xlsm", xlsx);
+        REG.put(".xls", new XlsRw());
     }
 
     /** 后续任务注册新读写器（T8-T12）。 */

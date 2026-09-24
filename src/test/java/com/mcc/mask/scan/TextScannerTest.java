@@ -59,4 +59,12 @@ class TextScannerTest {
         TextScanner.ScanResult plain = s.maskCell("备注", "普通备注无敏感");
         assertEquals(0, plain.hits());
     }
+
+    @Test
+    void columnRuleShapeGuard() {
+        TextScanner s = new TextScanner(rules, book);
+        TextScanner.ScanResult r = s.maskCell("车牌", "昆山精密五金厂");
+        assertEquals(0, r.hits(), "值不是车牌形时不得硬套车牌变换");
+        assertEquals("昆山精密五金厂", r.text());
+    }
 }
