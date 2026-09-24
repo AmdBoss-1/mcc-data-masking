@@ -113,6 +113,21 @@ public final class Transformers {
         return (orig, seed) -> FakePools.factory(new Random(seed), orig);
     }
 
+    /** 地址：保留到省/市，街道门牌换假。 */
+    public static Transformer address() {
+        return (orig, seed) -> {
+            Random r = new Random(seed);
+            int idx = orig == null ? -1 : orig.indexOf('市');
+            if (idx < 0) {
+                idx = orig == null ? -1 : orig.indexOf('省');
+            }
+            String keep = idx >= 0 ? orig.substring(0, idx + 1) : "";
+            return keep + FakePools.ZI[r.nextInt(FakePools.ZI.length)]
+                    + FakePools.ZI[r.nextInt(FakePools.ZI.length)]
+                    + "路" + (1 + r.nextInt(999)) + "号";
+        };
+    }
+
     /** 数值微扰：±pct% 内、保持原小数位。 */
     public static Transformer jitter(double pct) {
         return (orig, seed) -> {
