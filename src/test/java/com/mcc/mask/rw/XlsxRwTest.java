@@ -15,9 +15,11 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -108,5 +110,42 @@ class XlsxRwTest {
     @Test
     void xlsRoundTrip(@TempDir Path dir) throws Exception {
         roundTrip(false, dir);
+    }
+
+    /**
+     * 回归：openpyxl / 部分导出工具写的是 inline string（<c t="inlineStr"><is><t>值</t></is></c>）。
+     * POI 的 setCellValue 只新增 <v>、不删 <is>，而 Excel 读的是 <is> → 产物看着没脱敏（真值仍在），
+     * 且工具还会报"替换 N 处"。这类文件必须真换掉，还原方向也要能换回来。
+     */
+    @Test
+    void 内联字符串单元格也要真换掉(@TempDir Path dir) throws Exception {
+        Path src = dir.resolve("in.xlsx");
+        try (InputStream is = getClass().getResourceAsStream("/inline-strings.xlsx")) {
+            assertNotNull(is, "缺少夹具 inline-strings.xlsx");
+            Files.copy(is, src, StandardCopyOption.REPLACE_EXISTING);
+        }
+        Codebook book = new Codebook(new CodebookJson());
+        Summary sum = new Summary();
+        Path masked = dir.resolve("m.xlsx");
+
+        Rw.RwResult r = RwFactory.byPath(src).process(src, masked, Ctx.mask(book, rules, sum));
+        assertTrue(r.hits() >= 6, "2 行×3 文本列: " + r.hits());
+        try (Workbook wb = new XSSFWorkbook(Files.newInputStream(masked))) {
+            Sheet sh = wb.getSheetAt(0);
+            assertEquals(book.maps().get("plate").get("苏A12345"), sh.getRow(1).getCell(0).getStringCellValue(),
+                    "Excel 打开必须看到假值");
+            assertEquals(book.maps().get("phone").get("13800001111"), sh.getRow(1).getCell(1).getStringCellValue());
+            assertEquals(book.maps().get("factory").get("昆山精密五金厂"), sh.getRow(1).getCell(2).getStringCellValue());
+            assertNotEquals("苏A12345", sh.getRow(2).getCell(0).getStringCellValue());
+            assertEquals(42.317, sh.getRow(1).getCell(3).getNumericCellValue(), 1e-9, "数值默认不动");
+        }
+
+        Path back = dir.resolve("r.xlsx");
+        RwFactory.byPath(masked).process(masked, back, Ctx.unmask(book, rules, sum));
+        try (Workbook wb = new XSSFWorkbook(Files.newInputStream(back))) {
+            Sheet sh = wb.getSheetAt(0);
+            assertEquals("苏A12345", sh.getRow(1).getCell(0).getStringCellValue());
+            assertEquals("昆山精密五金厂", sh.getRow(1).getCell(2).getStringCellValue());
+        }
     }
 }

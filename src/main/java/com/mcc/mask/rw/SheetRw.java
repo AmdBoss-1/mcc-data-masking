@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,12 +58,25 @@ final class SheetRw {
                     hits += sr.hits();
                     warnings.addAll(sr.warnings());
                     if (sr.hits() > 0) {
-                        cell.setCellValue(sr.text());
+                        writeText(cell, sr.text());
                     }
                 }
             }
         }
         return new Rw.RwResult(hits, warnings);
+    }
+
+    /**
+     * 写回文本。坑：openpyxl 等工具写的 xlsx 用 inline string（{@code <c t="inlineStr"><is><t>值</t></is></c>}），
+     * POI 的 setCellValue 只新增 {@code <v>} 不清 {@code <is>}，而 Excel/POI 读的都是 {@code <is>}
+     * → 产物看着完全没脱敏（真值还在），日志却报"替换 N 处"。先摘掉 inline 串再写。
+     */
+    static void writeText(Cell cell, String text) {
+        if (cell instanceof XSSFCell xssf && xssf.getCTCell().isSetIs()) {
+            xssf.getCTCell().unsetIs();
+            xssf.getCTCell().unsetT();
+        }
+        cell.setCellValue(text);
     }
 
     private SheetRw() {
