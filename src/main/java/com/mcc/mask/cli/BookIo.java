@@ -58,6 +58,23 @@ public final class BookIo {
         }
     }
 
+    /** 覆写后删除码本（CLI purge 与网页控制台共用）。返回 false 表示本来就不存在。 */
+    public static boolean purge(Path file) {
+        if (!Files.exists(file)) {
+            return false;
+        }
+        try {
+            long size = Files.size(file);
+            byte[] junk = new byte[(int) Math.max(size, 1024)];
+            new java.security.SecureRandom().nextBytes(junk);
+            Files.write(file, junk);
+            Files.delete(file);
+        } catch (IOException e) {
+            throw new MaskException("销毁码本失败: " + e.getMessage(), e);
+        }
+        return true;
+    }
+
     private BookIo() {
     }
 }

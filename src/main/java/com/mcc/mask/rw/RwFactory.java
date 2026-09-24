@@ -42,6 +42,16 @@ public final class RwFactory {
         REG.put(ext.toLowerCase(Locale.ROOT), rw);
     }
 
+    /** 只问"认不认这个文件名"，不抛异常（网页控制台列目录用）。 */
+    public static boolean isSupported(String fileName) {
+        String n = fileName.toLowerCase(Locale.ROOT);
+        if (n.endsWith(".mv.db")) {
+            return true;
+        }
+        int dot = n.lastIndexOf('.');
+        return dot >= 0 && REG.containsKey(n.substring(dot));
+    }
+
     public static Rw byPath(Path p) {
         String n = p.getFileName().toString().toLowerCase(Locale.ROOT);
         if (n.endsWith(".mv.db")) {

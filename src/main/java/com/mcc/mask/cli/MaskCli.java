@@ -39,12 +39,13 @@ public final class MaskCli {
         return cl.execute(args);
     }
 
-    @Command(name = "mask-tool", subcommands = {MaskCmd.class, UnmaskCmd.class, LookupCmd.class, PurgeCmd.class},
+    @Command(name = "mask-tool", subcommands = {MaskCmd.class, UnmaskCmd.class, LookupCmd.class, PurgeCmd.class,
+            ServeCmd.class},
             mixinStandardHelpOptions = true, description = "MCC 数据脱敏工具（离线；码本绝不出门）")
     static class Root implements Callable<Integer> {
         @Override
         public Integer call() {
-            System.out.println("用法: mask | unmask | lookup | purge（见 --help）");
+            System.out.println("用法: mask | unmask | lookup | purge | serve（见 --help）");
             return 0;
         }
     }
@@ -208,27 +209,19 @@ public final class MaskCli {
         String bookDir;
 
         @Override
-        public Integer call() throws IOException {
+        public Integer call() {
             Path bookFile = BookIo.resolve(bookDir, false);
-            if (!Files.exists(bookFile)) {
+            if (!BookIo.purge(bookFile)) {
                 System.out.println("码本不存在，无需销毁: " + bookFile);
                 return 0;
             }
-            long size = Files.size(bookFile);
-            byte[] junk = new byte[(int) Math.max(size, 1024)];
-            new java.security.SecureRandom().nextBytes(junk);
-            Files.write(bookFile, junk);
-            Files.delete(bookFile);
             System.out.println("码本已覆写删除: " + bookFile);
             return 0;
         }
     }
 
     private static Path sib(Path in, String suffix) {
-        String n = in.getFileName().toString();
-        int dot = n.lastIndexOf('.');
-        return dot < 0 ? in.resolveSibling(n + suffix)
-                : in.resolveSibling(n.substring(0, dot) + suffix + n.substring(dot));
+        return com.mcc.mask.util.Paths0.sib(in, suffix);
     }
 
     static void printSummary(Summary sum, Codebook book, Path bookFile, Path target) {

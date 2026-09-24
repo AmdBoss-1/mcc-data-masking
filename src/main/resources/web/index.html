@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCC 脱敏控制台</title>
+<style>
+:root{
+  --bg:#161009; --t1:#fff; --t2:#cbd5e1; --t3:#94a3b8;
+  --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.035);
+  --line:rgba(255,255,255,.14); --line-soft:rgba(255,255,255,.08);
+  --gold-1:#f0b95a; --gold-2:#f6d489; --gold-3:#ffe9b8;
+  --danger-1:#f43f5e; --danger-2:#e11d48; --ok:#34d399;
+  --r-card:16px; --r-btn:11px;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--t1);
+  font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;position:relative;overflow-x:hidden}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;pointer-events:none;z-index:0}
+.blob.a{width:420px;height:420px;background:#e8722a;top:-120px;left:-80px}
+.blob.b{width:380px;height:380px;background:#8a5a12;top:35%;right:-100px}
+.blob.c{width:300px;height:300px;background:#3b2410;bottom:-80px;left:30%}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 20px 60px}
+header{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--gold-1),var(--gold-2),var(--gold-3));
+  display:grid;place-items:center;color:#2b1a05;font-weight:800;font-size:17px;box-shadow:0 6px 20px rgba(240,185,90,.28)}
+h1{font-size:19px;margin:0;letter-spacing:.5px}
+.sub{color:var(--t3);font-size:12px}
+.spacer{flex:1}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-card);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 32px rgba(0,0,0,.35);
+  padding:16px 18px;margin-bottom:14px;position:relative}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:rgba(255,255,255,.2);
+  border-radius:var(--r-card) var(--r-card) 0 0}
+.card h2{font-size:14px;margin:0 0 12px;color:var(--gold-2);letter-spacing:.6px;font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;
+  background:rgba(240,185,90,.14);border:1px solid rgba(240,185,90,.35);color:var(--gold-3)}
+.badge.off{background:rgba(255,255,255,.05);border-color:var(--line);color:var(--t3)}
+button{font:inherit;cursor:pointer;border-radius:var(--r-btn);border:1px solid transparent;transition:.15s}
+.btn{padding:8px 16px;background:linear-gradient(135deg,var(--gold-1),var(--gold-2));color:#2b1a05;font-weight:700}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.42;cursor:not-allowed;filter:none}
+.ghost{padding:7px 13px;background:var(--glass-2);border-color:var(--line);color:var(--t2)}
+.ghost:hover{background:rgba(255,255,255,.09);color:#fff}
+.danger{padding:7px 13px;background:linear-gradient(135deg,var(--danger-1),var(--danger-2));color:#fff;font-weight:600}
+input[type=password],input[type=text],input[type=search]{font:inherit;padding:9px 12px;border-radius:10px;
+  background:rgba(0,0,0,.28);border:1px solid var(--line);color:var(--t1);outline:none;width:100%}
+input:focus{border-color:var(--gold-1);box-shadow:0 0 0 3px rgba(240,185,90,.16)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{padding:7px 15px;border-radius:999px;background:var(--glass-2);border:1px solid var(--line);color:var(--t2)}
+.tab.on{background:rgba(240,185,90,.16);border-color:rgba(240,185,90,.45);color:var(--gold-3);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--t3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);
+  position:sticky;top:0;background:rgba(22,16,9,.92);backdrop-filter:blur(8px)}
+td{padding:7px 10px;border-bottom:1px solid var(--line-soft)}
+tbody tr:hover{background:rgba(255,255,255,.04)}
+.list{max-height:340px;overflow:auto;border:1px solid var(--line-soft);border-radius:12px}
+.list label{display:flex;gap:9px;align-items:center;padding:7px 11px;cursor:pointer}
+.list label:hover{background:rgba(255,255,255,.04)}
+.list input[type=checkbox]{accent-color:var(--gold-1);width:15px;height:15px}
+.na{color:var(--t3);font-size:11px;margin-left:auto}
+.sz{color:var(--t3);font-size:11px}
+.dir{color:var(--gold-2)}
+.cards{display:grid;gap:10px}
+.res{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--glass-2)}
+.res.bad{border-color:rgba(244,63,94,.6);background:rgba(244,63,94,.09)}
+.res .k{color:var(--t2);font-size:12px}
+.warn{color:#ffbe7d;font-size:12px}
+.err{color:#ff8ea0;font-size:12px}
+.ok{color:var(--ok);font-size:12px}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin:10px 0 2px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold-1),var(--gold-3));transition:.2s}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--t3);
+  background:var(--glass-2);transition:.15s}
+.drop.hot{border-color:var(--gold-1);color:var(--gold-3);background:rgba(240,185,90,.09)}
+.grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+.locked .need{opacity:.35;pointer-events:none;filter:saturate(.4)}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tip{color:var(--t3);font-size:12px;margin-top:8px}
+.red-tip{color:#ff8ea0;font-size:12px;margin-top:8px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:12px;color:var(--t3)}
+.hide{display:none}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
+<div class="wrap">
+  <header>
+    <div class="logo">Mask</div>
+    <div>
+      <h1>MCC 脱敏控制台</h1>
+      <div class="sub">本机离线 · 码本不出门 · 脱敏后发 AI，AI 产物按码本还原</div>
+    </div>
+    <div class="spacer"></div>
+    <span id="bookBadge" class="badge off">未解锁</span>
+    <button id="lockBtn" class="ghost hide">锁定</button>
+  </header>
+
+  <!-- 门禁 -->
+  <section class="card" id="gate">
+    <h2>第一步 · 打开码本</h2>
+    <div class="tabs">
+      <button class="tab on" data-tab="unlock">解锁已有码本</button>
+      <button class="tab" data-tab="new">新建码本</button>
+    </div>
+    <div class="row">
+      <input id="pass" type="password" placeholder="码本口令（只在内存，不落盘）" autocomplete="new-password" style="max-width:420px">
+      <button id="goBtn" class="btn">解锁</button>
+    </div>
+    <div class="tip">口令只存在这台机器的内存里：刷新页面即锁、闲置 30 分钟自动锁、锁定即覆写清零。忘记口令无法还原。</div>
+    <div id="gateErr" class="err"></div>
+  </section>
+
+  <div id="main" class="locked">
+    <!-- 工作区 -->
+    <section class="card need">
+      <h2>第二步 · 选文件（工作目录：<span id="rootPath" class="mono"></span>）</h2>
+      <div class="row" style="margin-bottom:10px">
+        <span id="crumb" class="mono dir"></span>
+        <button class="ghost" id="upBtn">上一级</button>
+        <button class="ghost" id="uplandBtn">上传区</button>
+        <button class="ghost" id="refreshBtn">刷新</button>
+        <label class="ghost" style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:11px;border:1px solid var(--line);color:var(--t2)">
+          <input type="checkbox" id="onlySupported" checked style="accent-color:var(--gold-1)">只看支持格式
+        </label>
+        <input id="filter" type="search" placeholder="按文件名过滤" style="max-width:200px">
+        <div class="spacer"></div>
+        <span class="sz" id="selInfo">已选 0</span>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="tip">支持：xlsx / xls / docx / doc / pptx / ppt / csv / txt·log·md / sql / H2 .mv.db。PDF 只检测报告，不替换。</div>
+    </section>
+
+    <div class="grid2">
+      <section class="card need">
+        <h2>第三步 · 执行</h2>
+        <div class="tabs">
+          <button class="tab on" data-mode="mask">脱敏（源数据 → 假值件）</button>
+          <button class="tab" data-mode="unmask">还原（AI 产物 → 真值件）</button>
+        </div>
+        <div class="row">
+          <button id="runBtn" class="btn">开始</button>
+          <label style="color:var(--t2);font-size:12px;display:flex;gap:6px;align-items:center" id="jitterWrap">
+            <input type="checkbox" id="jitter" style="accent-color:var(--gold-1)">数值 ±3% 微扰
+          </label>
+          <span class="sz" id="runInfo"></span>
+        </div>
+        <div class="bar"><i id="bar"></i></div>
+        <div class="red-tip">还原：把 AI 返回的文件放进工作目录（或下面拖入上传区）再执行。产物名后缀 <span class="mono">.masked</span> / <span class="mono">.restored</span>，原文件不动。</div>
+        <div class="cards" id="results" style="margin-top:12px"></div>
+      </section>
+
+      <section class="card need">
+        <h2>拖入 AI 产物（落工作目录 .mcc-upload/）</h2>
+        <div class="drop" id="drop">把 md / xlsx / docx / csv / txt 拖到这里，或点击选择</div>
+        <input type="file" id="file" class="hide" multiple>
+        <div class="tip">上限 512MB/件；重名自动加序号。上传后可在「上传区」勾选并还原。</div>
+        <div id="upErr" class="err"></div>
+      </section>
+    </div>
+
+    <!-- 对照表 -->
+    <section class="card need">
+      <h2>对照表（含原值，严禁外发）</h2>
+      <div class="row" style="margin-bottom:8px">
+        <input id="pq" type="search" placeholder="搜索原值或假值" style="max-width:280px">
+        <button class="ghost" id="pSearch">搜索</button>
+        <div class="spacer"></div>
+        <button class="danger" id="exportBtn">导出对照表 CSV</button>
+      </div>
+      <div class="list" style="max-height:300px">
+        <table><thead><tr><th>类别</th><th>原值</th><th>假值</th><th></th></tr></thead>
+        <tbody id="pairs"></tbody></table>
+      </div>
+      <div class="pager"><span id="pInfo"></span><button class="ghost" id="pPrev">上一页</button><button class="ghost" id="pNext">下一页</button></div>
+    </section>
+
+    <!-- 反查 -->
+    <section class="card need">
+      <h2>单点反查</h2>
+      <div class="row">
+        <input id="lv" type="text" placeholder="贴一个假值（或原值）" style="max-width:340px">
+        <button class="ghost" id="lookupBtn">假 → 真</button>
+        <button class="ghost" id="lookupRevBtn">真 → 假</button>
+      </div>
+      <div id="lkOut" class="mono" style="margin-top:10px"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let unlocked=false, dir="", entries=[], page=1, total=0, mode="mask", tab="unlock";
+
+async function api(path,opts){
+  const r=await fetch(path,Object.assign({headers:{}},opts));
+  const ct=r.headers.get("Content-Type")||"";
+  if(ct.includes("application/json")){const j=await r.json(); if(!r.ok||j.ok===false) throw new Error(j.error||("HTTP "+r.status)); return j;}
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return r;
+}
+function jbody(o){return {headers:{"Content-Type":"application/json"},body:JSON.stringify(o)}}
+
+async function refreshState(){
+  try{
+    const s=await api("/api/state");
+    unlocked=s.unlocked; $("#rootPath").textContent=s.root;
+    $("#bookBadge").className="badge"+(unlocked?"":" off");
+    $("#bookBadge").textContent=unlocked?("已解锁 · 映射 "+s.mapped+" 条 · 经手 "+s.files.length+" 件"):"未解锁";
+    $("#gate").classList.toggle("hide",unlocked);
+    $("#main").classList.toggle("locked",!unlocked);
+    $("#lockBtn").classList.toggle("hide",!unlocked);
+    if(unlocked){ await loadList(); await loadPairs(); }
+  }catch(e){ $("#gateErr").textContent=e.message; }
+}
+
+async function loadList(){
+  entries=await (await api("/api/ls?dir="+encodeURIComponent(dir))).entries;
+  const f=$("#filter").value.trim().toLowerCase(), onlyS=$("#onlySupported").checked;
+  const rows=entries.filter(e=>!f||e.name.toLowerCase().includes(f)).filter(e=>e.dir||!onlyS||e.supported);
+  $("#crumb").textContent="根目录"+(dir?" / "+dir:"");
+  $("#list").innerHTML=rows.map(e=>e.dir
+    ? `<div style="padding:7px 11px"><span class="dir mono" data-cd="${esc(e.rel)}">▸ ${esc(e.name)}/</span></div>`
+    : `<label><input type="checkbox" class="fchk" value="${esc(e.rel)}" ${e.supported?"":"disabled"}>
+        <span class="mono">${esc(e.name)}</span><span class="sz">${sz(e.size)}</span><span class="sz">${esc(e.mtime)}</span>
+        ${e.supported?"":'<span class="na">不支持</span>'}</label>`).join("")||'<div class="tip" style="padding:11px">这里没有可处理的文件</div>';
+  $$("#list .dir").forEach(a=>a.onclick=()=>{dir=a.dataset.cd;loadList()});
+  $$(".fchk").forEach(c=>c.onchange=selInfo);
+  selInfo();
+}
+function selInfo(){const n=$$(".fchk:checked").length;$("#selInfo").textContent="已选 "+n}
+function sz(b){return b>1048576?(b/1048576).toFixed(1)+" MB":b>1024?(b/1024).toFixed(0)+" KB":b+" B"}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+async function loadPairs(){
+  const j=await api(`/api/pairs?q=${encodeURIComponent($("#pq").value)}&page=${page}`);
+  total=j.total;page=j.page;
+  $("#pairs").innerHTML=j.rows.map(r=>`<tr><td>${esc(r.rule)}</td><td class="mono">${esc(r.orig)}</td>
+    <td class="mono">${esc(r.fake)}</td><td><button class="ghost" data-cp="${esc(r.orig)}">复制原值</button></td></tr>`).join("")
+    ||'<tr><td colspan="4" class="tip">还没有映射——先跑一次脱敏</td></tr>';
+  $$("#pairs [data-cp]").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.dataset.cp);b.textContent="已复制"});
+  const pages=Math.max(1,Math.ceil(total/j.pageSize));
+  $("#pInfo").textContent=`共 ${total} 条 · 第 ${page}/${pages} 页`;
+}
+
+async function run(){
+  const files=$$(".fchk:checked").map(c=>c.value);
+  if(!files.length){$("#runInfo").textContent="先勾选文件";return}
+  $("#runBtn").disabled=true;$("#results").innerHTML="";$("#bar").style.width="0%";
+  let done=0, all=[];
+  for(const f of files){
+    try{
+      const j=await api("/api/run",Object.assign({method:"POST"},jbody({mode,files:[f],jitter:$("#jitter").checked})));
+      all.push(j.results[0]);
+    }catch(e){ all.push({file:f,ok:false,error:e.message}); }
+    done++;$("#bar").style.width=Math.round(done/files.length*100)+"%";
+  }
+  const ok=all.filter(r=>r.ok).length;
+  $("#runInfo").textContent=`${ok} 成功 / ${all.length-ok} 失败`;
+  $("#results").innerHTML=all.map(r=>r.ok?`
+    <div class="res"><div class="k">${esc(r.file)} → <b class="mono">${esc(r.out)}</b></div>
+      <div>替换 <b>${r.hits}</b> 处</div>
+      ${(r.warnings||[]).map(w=>`<div class="warn">⚠ ${esc(w)}</div>`).join("")}
+      <div class="row" style="margin-top:6px">
+        <a class="ghost" style="text-decoration:none;padding:7px 13px;display:inline-block;border-radius:11px;border:1px solid var(--line);color:var(--t2)"
+           href="/file?path=${encodeURIComponent(r.out)}" download>下载产物</a>
+        <button class="ghost" data-copy="${esc(r.out)}">复制产物路径</button>
+      </div></div>`
+    :`<div class="res bad"><div class="k">${esc(r.file)}</div><div class="err">${esc(r.error||"失败")}</div></div>`).join("");
+  $$("#results [data-copy]").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.dataset.copy);b.textContent="已复制"});
+  $("#runBtn").disabled=false;
+  await loadPairs(); await refreshState();
+}
+
+async function upload(files){
+  $("#upErr").textContent="";
+  for(const f of files){
+    const fd=new FormData(); fd.append("file",f,f.name);
+    try{ const j=await api("/api/upload",{method:"POST",body:fd});
+      $("#runInfo").textContent="已收: "+j.rel;
+    }catch(e){ $("#upErr").textContent=e.message; }
+  }
+  dir=".mcc-upload"; await loadList();
+  $$(".fchk").forEach(c=>c.checked=true); selInfo();
+}
+
+// 事件
+$$("[data-tab]").forEach(b=>b.onclick=()=>{
+  tab=b.dataset.tab;$$("[data-tab]").forEach(x=>x.classList.toggle("on",x===b));
+  $("#goBtn").textContent=tab==="new"?"新建并进入":"解锁";
+});
+$("#goBtn").onclick=async()=>{
+  const pass=$("#pass").value;
+  if(!pass){$("#gateErr").textContent="口令不能为空";return}
+  $("#gateErr").textContent="";$("#goBtn").disabled=true;
+  try{
+    await api(tab==="new"?"/api/book/new":"/api/book/unlock",Object.assign({method:"POST"},jbody({pass})));
+    $("#pass").value="";await refreshState();
+  }catch(e){ $("#gateErr").textContent=e.message; $("#pass").value=""; }
+  $("#goBtn").disabled=false;
+};
+$("#pass").onkeydown=e=>{if(e.key==="Enter")$("#goBtn").click()};
+$("#lockBtn").onclick=async()=>{try{await api("/api/lock",{method:"POST"})}catch(e){}await refreshState()};
+$$("[data-mode]").forEach(b=>b.onclick=()=>{
+  mode=b.dataset.mode;$$("[data-mode]").forEach(x=>x.classList.toggle("on",x===b));
+  $("#jitterWrap").style.display=mode==="mask"?"flex":"none";
+});
+$("#runBtn").onclick=run;
+$("#refreshBtn").onclick=loadList;
+$("#upBtn").onclick=()=>{const i=dir.lastIndexOf("/");dir=i<0?"":dir.slice(0,i);loadList()};
+$("#uplandBtn").onclick=()=>{dir=".mcc-upload";loadList()};
+$("#onlySupported").onchange=loadList; $("#filter").oninput=loadList;
+$("#pSearch").onclick=()=>{page=1;loadPairs()};
+$("#pq").onkeydown=e=>{if(e.key==="Enter"){page=1;loadPairs()}};
+$("#pPrev").onclick=()=>{if(page>1){page--;loadPairs()}};
+$("#pNext").onclick=()=>{if(page*200<total){page++;loadPairs()}};
+$("#exportBtn").onclick=()=>{
+  if(!confirm("对照表含原值，导出后严禁发给 AI 或外发。确认导出？"))return;
+  location.href="/api/export/pairs";
+};
+$("#lookupBtn").onclick=()=>lookup(false);
+$("#lookupRevBtn").onclick=()=>lookup(true);
+async function lookup(rev){
+  const v=$("#lv").value.trim(); $("#lkOut").innerHTML="";
+  if(!v){$("#lkOut").textContent="先填值";return}
+  try{
+    const j=await api("/api/lookup",Object.assign({method:"POST"},jbody({value:v,rev})));
+    if(rev){
+      $("#lkOut").innerHTML=(j.hits||[]).length?j.hits.map(h=>`${esc(h.orig)} → <b>${esc(h.fake)}</b>`).join("<br>"):"没命中（未识别到敏感串）";
+    }else{
+      $("#lkOut").innerHTML=j.hit?`${esc(v)} → <b>${esc(j.orig)}</b>`
+        :'<span class="warn">不在码本里（可能被 AI 改写、翻译或截断过）</span>';
+    }
+  }catch(e){$("#lkOut").innerHTML='<span class="err">'+esc(e.message)+"</span>"}
+}
+const drop=$("#drop");
+drop.onclick=()=>$("#file").click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("hot")};
+drop.ondragleave=()=>drop.classList.remove("hot");
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove("hot");upload([...e.dataTransfer.files])};
+$("#file").onchange=e=>upload([...e.target.files]);
+// 刷新即锁：口令不进 sessionStorage，页面 unload 时主动清内存
+addEventListener("pagehide",()=>{navigator.sendBeacon("/api/lock",new Blob(["{}"],{type:"text/plain"}))});
+refreshState();
+</script>
+</body>
+</html>
