@@ -34,6 +34,7 @@ public final class RwFactory {
         REG.put(".mv.db", h2);
         REG.put(".mccbak", h2);
         REG.put(".sql", new SqlDumpRw());
+        REG.put(".pdf", new PdfScanRw());
     }
 
     /** 后续任务注册新读写器（T8-T12）。 */
