@@ -5,345 +5,550 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MCC 脱敏控制台</title>
 <style>
+/* ---------- 令牌 ---------- */
 :root{
-  --bg:#161009; --t1:#fff; --t2:#cbd5e1; --t3:#94a3b8;
-  --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.035);
-  --line:rgba(255,255,255,.14); --line-soft:rgba(255,255,255,.08);
-  --gold-1:#f0b95a; --gold-2:#f6d489; --gold-3:#ffe9b8;
-  --danger-1:#f43f5e; --danger-2:#e11d48; --ok:#34d399;
-  --r-card:16px; --r-btn:11px;
+  --bg:#130e08; --bg-2:#191207;
+  --panel:rgba(255,255,255,.045); --panel-2:rgba(255,255,255,.028); --panel-3:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.1); --line-2:rgba(255,255,255,.06);
+  --t1:#fff; --t2:#d9d3c8; --t3:#a79e90; --t4:#837a6c;
+  --gold:#f0b95a; --gold-2:#f6d489; --gold-ink:#1d1206; --gold-soft:rgba(240,185,90,.13);
+  --red:#ff5c78; --red-2:#d81f45; --ok:#4ade80; --warn:#ffc17a;
+  --r:14px; --r-sm:10px;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --shadow-1:0 4px 14px rgba(0,0,0,.32);
+  --shadow-btn:0 6px 18px rgba(2,6,23,.4);
+  --z-bar:10; --z-drawer:20; --z-modal:30;
 }
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--t1);
-  font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;position:relative;overflow-x:hidden}
-.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;pointer-events:none;z-index:0}
-.blob.a{width:420px;height:420px;background:#e8722a;top:-120px;left:-80px}
-.blob.b{width:380px;height:380px;background:#8a5a12;top:35%;right:-100px}
-.blob.c{width:300px;height:300px;background:#3b2410;bottom:-80px;left:30%}
-.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 20px 60px}
-header{display:flex;align-items:center;gap:14px;margin-bottom:18px}
-.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--gold-1),var(--gold-2),var(--gold-3));
-  display:grid;place-items:center;color:#2b1a05;font-weight:800;font-size:17px;box-shadow:0 6px 20px rgba(240,185,90,.28)}
-h1{font-size:19px;margin:0;letter-spacing:.5px}
-.sub{color:var(--t3);font-size:12px}
-.spacer{flex:1}
-.card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-card);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 32px rgba(0,0,0,.35);
-  padding:16px 18px;margin-bottom:14px;position:relative}
-.card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:rgba(255,255,255,.2);
-  border-radius:var(--r-card) var(--r-card) 0 0}
-.card h2{font-size:14px;margin:0 0 12px;color:var(--gold-2);letter-spacing:.6px;font-weight:600}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;
-  background:rgba(240,185,90,.14);border:1px solid rgba(240,185,90,.35);color:var(--gold-3)}
-.badge.off{background:rgba(255,255,255,.05);border-color:var(--line);color:var(--t3)}
-button{font:inherit;cursor:pointer;border-radius:var(--r-btn);border:1px solid transparent;transition:.15s}
-.btn{padding:8px 16px;background:linear-gradient(135deg,var(--gold-1),var(--gold-2));color:#2b1a05;font-weight:700}
-.btn:hover{filter:brightness(1.08)}
-.btn:disabled{opacity:.42;cursor:not-allowed;filter:none}
-.ghost{padding:7px 13px;background:var(--glass-2);border-color:var(--line);color:var(--t2)}
-.ghost:hover{background:rgba(255,255,255,.09);color:#fff}
-.danger{padding:7px 13px;background:linear-gradient(135deg,var(--danger-1),var(--danger-2));color:#fff;font-weight:600}
-input[type=password],input[type=text],input[type=search]{font:inherit;padding:9px 12px;border-radius:10px;
-  background:rgba(0,0,0,.28);border:1px solid var(--line);color:var(--t1);outline:none;width:100%}
-input:focus{border-color:var(--gold-1);box-shadow:0 0 0 3px rgba(240,185,90,.16)}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tab{padding:7px 15px;border-radius:999px;background:var(--glass-2);border:1px solid var(--line);color:var(--t2)}
-.tab.on{background:rgba(240,185,90,.16);border-color:rgba(240,185,90,.45);color:var(--gold-3);font-weight:600}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;color:var(--t3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);
-  position:sticky;top:0;background:rgba(22,16,9,.92);backdrop-filter:blur(8px)}
-td{padding:7px 10px;border-bottom:1px solid var(--line-soft)}
-tbody tr:hover{background:rgba(255,255,255,.04)}
-.list{max-height:340px;overflow:auto;border:1px solid var(--line-soft);border-radius:12px}
-.list label{display:flex;gap:9px;align-items:center;padding:7px 11px;cursor:pointer}
-.list label:hover{background:rgba(255,255,255,.04)}
-.list input[type=checkbox]{accent-color:var(--gold-1);width:15px;height:15px}
-.na{color:var(--t3);font-size:11px;margin-left:auto}
-.sz{color:var(--t3);font-size:11px}
-.dir{color:var(--gold-2)}
-.cards{display:grid;gap:10px}
-.res{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--glass-2)}
-.res.bad{border-color:rgba(244,63,94,.6);background:rgba(244,63,94,.09)}
-.res .k{color:var(--t2);font-size:12px}
-.warn{color:#ffbe7d;font-size:12px}
-.err{color:#ff8ea0;font-size:12px}
-.ok{color:var(--ok);font-size:12px}
-.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin:10px 0 2px}
-.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold-1),var(--gold-3));transition:.2s}
-.drop{border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--t3);
-  background:var(--glass-2);transition:.15s}
-.drop.hot{border-color:var(--gold-1);color:var(--gold-3);background:rgba(240,185,90,.09)}
-.grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
-.locked .need{opacity:.35;pointer-events:none;filter:saturate(.4)}
-.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.tip{color:var(--t3);font-size:12px;margin-top:8px}
-.red-tip{color:#ff8ea0;font-size:12px;margin-top:8px}
-.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:12px;color:var(--t3)}
-.hide{display:none}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+html{color-scheme:dark}
+body{margin:0;min-height:100vh;color:var(--t1);background:
+  radial-gradient(900px 520px at 12% -8%, rgba(232,114,42,.16), transparent 62%),
+  radial-gradient(760px 480px at 96% 8%, rgba(240,185,90,.1), transparent 60%),
+  linear-gradient(180deg,var(--bg-2),var(--bg) 42%);
+  font:400 14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+  font-variant-numeric:tabular-nums;overflow-x:hidden}
+::selection{background:rgba(240,185,90,.3)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+svg{display:block}
+.i{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.i.s{width:13px;height:13px}.i.l{width:18px;height:18px}
+
+/* ---------- 顶栏（唯一大面积玻璃层） ---------- */
+.bar{position:sticky;top:0;z-index:var(--z-bar);display:flex;align-items:center;gap:16px;height:60px;padding:0 22px;
+  background:rgba(19,14,8,.72);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid var(--line-2)}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand .glyph{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--gold-ink);
+  background:linear-gradient(140deg,var(--gold),var(--gold-2))}
+.brand .glyph svg{width:18px;height:18px;stroke:var(--gold-ink);stroke-width:2}
+.brand h1{margin:0;font-size:16px;font-weight:650;letter-spacing:.2px;white-space:nowrap}
+.gap{flex:1}
+.status{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 13px;border-radius:999px;font-size:12.5px;
+  color:var(--t3);background:var(--panel-2);border:1px solid var(--line-2);white-space:nowrap}
+.status.on{color:var(--gold-2);background:var(--gold-soft);border-color:rgba(240,185,90,.3)}
+.status .bead{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.65}
+.status.on .bead{background:var(--gold);opacity:1;box-shadow:0 0 0 3px rgba(240,185,90,.16)}
+
+/* ---------- 按键 ---------- */
+button,a.act{font:inherit;color:inherit;background:none;border:0;cursor:pointer;border-radius:var(--r-sm);
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;
+  transition:background .18s var(--ease),color .18s var(--ease),border-color .18s var(--ease),transform .12s var(--ease),filter .18s var(--ease)}
+button:active,a.act:active{transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:grayscale(.35)}
+.primary{height:36px;padding:0 18px;font-size:14px;font-weight:650;color:var(--gold-ink);
+  background:linear-gradient(140deg,var(--gold) 8%,var(--gold-2));box-shadow:var(--shadow-btn)}
+.primary:hover{filter:brightness(1.06)}
+.primary.wide{height:46px;width:100%;font-size:15px}
+.primary.small{height:30px;padding:0 13px;font-size:12.5px}
+.quiet{height:30px;padding:0 11px;font-size:12.5px;color:var(--t2);background:var(--panel-3);border:1px solid var(--line)}
+.quiet:hover{background:rgba(255,255,255,.12);color:#fff}
+.quiet.on{color:var(--gold-2);background:var(--gold-soft);border-color:rgba(240,185,90,.34)}
+.text{height:28px;padding:0 8px;font-size:12.5px;color:var(--gold-2)}
+.text:hover{background:var(--gold-soft)}
+.danger{height:30px;padding:0 12px;font-size:12.5px;font-weight:600;color:#fff;
+  background:linear-gradient(140deg,#f4436a,var(--red-2));box-shadow:0 6px 16px rgba(216,31,69,.22)}
+.icon-btn{width:30px;height:30px;border-radius:999px;color:var(--t2);background:var(--panel-3);border:1px solid var(--line)}
+.icon-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+.switch{display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-2)}
+.switch button{height:28px;padding:0 15px;font-size:12.5px;border-radius:9px;color:var(--t3)}
+.switch button:hover{color:#fff}
+.switch button.on{color:var(--gold-ink);font-weight:650;background:linear-gradient(140deg,var(--gold),var(--gold-2))}
+.spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+input[type=password],input[type=text],input[type=search]{width:100%;height:36px;padding:0 12px;color:var(--t1);
+  font:inherit;font-size:13.5px;background:rgba(0,0,0,.34);border:1px solid var(--line);border-radius:var(--r-sm);outline:none;
+  transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
+input::placeholder{color:#9c907f}
+input:hover{border-color:rgba(255,255,255,.18)}
+input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,185,90,.14)}
+.check{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--t2);cursor:pointer;white-space:nowrap}
+.check input{width:15px;height:15px;accent-color:var(--gold)}
+.hide{display:none!important}
+
+/* ---------- 门禁视图 ---------- */
+.gate{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center;
+  max-width:1020px;margin:0 auto;padding:9vh 24px 0}
+.gate h2{margin:0 0 6px;font-size:26px;font-weight:650;letter-spacing:-.01em;text-wrap:balance}
+.gate p.lede{margin:0 0 26px;color:var(--t3);font-size:13.5px;max-width:34ch}
+.gate .field{margin-bottom:11px}
+.gate .err{color:var(--red);font-size:12.5px;min-height:20px;margin-top:10px}
+.gate .fine{margin-top:20px;padding-top:16px;border-top:1px solid var(--line-2);color:var(--t4);font-size:12px;line-height:1.8}
+.gate .fine b{color:var(--t2);font-weight:500}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:20px}
+.steps li{display:flex;gap:13px}
+.steps .n{width:26px;height:26px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:650;
+  color:var(--gold-2);background:var(--gold-soft);border:1px solid rgba(240,185,90,.26)}
+.steps h3{margin:2px 0 3px;font-size:14px;font-weight:600}
+.steps p{margin:0;color:var(--t3);font-size:12.5px;line-height:1.65;max-width:38ch}
+
+/* ---------- 工作台 ---------- */
+.shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.86fr) minmax(0,1fr);gap:18px;
+  max-width:1500px;margin:0 auto;padding:20px 22px 40px;align-items:stretch}
+.shell.locked{opacity:.36;filter:saturate(.4);pointer-events:none}
+.pane{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r);min-width:0;
+  display:flex;flex-direction:column;min-height:min(66vh,560px)}
+.pane > header{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line-2)}
+.pane > header h2{margin:0;font-size:13.5px;font-weight:650;letter-spacing:.2px}
+.pane > header .meta{font-size:12px;color:var(--t3);margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane .body{padding:14px 15px;display:flex;flex-direction:column;flex:1}
+.pane .body.tight{padding:10px 15px 14px}
+
+/* 文件区 */
+.path{display:flex;align-items:center;gap:2px;flex-wrap:wrap;font-size:12px;color:var(--t3);padding:11px 15px 0;min-height:30px}
+.path button{height:22px;padding:0 6px;font-size:12px;color:var(--t3);border-radius:6px}
+.path button:hover{color:#fff;background:var(--panel-3)}
+.path .here{color:var(--t1);font-weight:600}
+.path .sl{opacity:.35;padding:0 1px}
+.tools{display:flex;align-items:center;gap:8px;padding:11px 15px 12px;border-bottom:1px solid var(--line-2)}
+.tools .grow{flex:1;min-width:120px}
+.tablewrap{flex:1;min-height:260px;max-height:min(58vh,560px);overflow:auto;overscroll-behavior:contain}
+table.grid{width:100%;border-collapse:separate;border-spacing:0}
+table.grid th{position:sticky;top:0;z-index:1;text-align:left;font-size:11.5px;font-weight:500;color:var(--t4);
+  padding:9px 10px;background:rgba(23,17,10,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line-2)}
+table.grid td{padding:8px 10px;border-bottom:1px solid var(--line-2);font-size:13px;vertical-align:middle}
+table.grid tbody tr:hover td{background:rgba(255,255,255,.035)}
+table.grid tbody tr.pick td{background:rgba(240,185,90,.07)}
+td.num{text-align:right;color:var(--t3);font-size:12px;white-space:nowrap}
+td.nm{max-width:0;width:60%}
+.nm .wrap{display:flex;align-items:center;gap:9px;min-width:0}
+.nm .txt{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane-audit .nm .txt{font-size:12px}
+.nm .ig{color:var(--t4)}
+tr.no .txt,tr.no td{color:var(--t4)}
+tr.dir .txt{cursor:pointer;color:var(--gold-2)}
+tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
+.chip{font-size:10.5px;line-height:1.7;padding:0 7px;border-radius:6px;color:var(--t3);background:var(--panel-3);border:1px solid var(--line-2)}
+.chip.gold{color:var(--gold-2);background:var(--gold-soft);border-color:rgba(240,185,90,.24)}
+.chip.bad{color:#ff9fb0;background:rgba(255,92,120,.12);border-color:rgba(255,92,120,.26)}
+.chip.ok{color:#86efac;background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.24)}
+.blank{padding:38px 18px;text-align:center;color:var(--t4);font-size:12.5px}
+.blank svg{width:30px;height:30px;margin:0 auto 10px;opacity:.55}
+.selbar{display:flex;align-items:center;gap:10px;padding:10px 15px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--t3)}
+.selbar b{color:var(--gold-2);font-weight:650}
+.selbar .grow{flex:1}
+
+/* 执行区 */
+.mode-note{margin:0 0 13px;padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.65;color:var(--t2);
+  background:var(--gold-soft);border:1px solid rgba(240,185,90,.2)}
+.mode-note b{color:var(--gold-2)}
+.mode-note code{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--gold-2)}
+.runline{display:flex;align-items:center;gap:10px}
+.runline .primary{flex:1}
+.rail{margin-top:11px;display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--t4)}
+.track{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-2));
+  transition:width .3s var(--ease)}
+.results{margin-top:13px;display:grid;gap:8px;flex:1;min-height:0;max-height:min(40vh,380px);overflow:auto;overscroll-behavior:contain;align-content:start}
+.res{display:grid;grid-template-columns:auto minmax(0,1fr);gap:11px;padding:11px 12px;border-radius:11px;
+  background:var(--panel-2);border:1px solid var(--line-2)}
+.res.bad{background:rgba(255,92,120,.07);border-color:rgba(255,92,120,.24)}
+.res .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);margin-top:7px}
+.res.bad .dot{background:var(--red)}
+.res .lines{min-width:0}
+.res .f{font-family:ui-monospace,Consolas,monospace;font-size:12px;word-break:break-all;line-height:1.5}
+.res .f em{color:var(--t4);font-style:normal;padding:0 3px}
+.res .hits{font-size:12px;color:var(--t2);margin-top:2px}
+.res .hits b{color:var(--gold-2);font-weight:650}
+.res .why{font-size:12px;color:#ff9fb0;margin-top:3px;line-height:1.6}
+.res .note{font-size:11.5px;color:var(--warn);margin-top:4px;line-height:1.6}
+.res .ops{display:flex;gap:6px;margin-top:8px}
+.drop{margin-top:13px;padding:13px 12px;border-radius:11px;text-align:center;color:var(--t3);font-size:12.5px;
+  border:1px dashed rgba(255,255,255,.18);background:var(--panel-2);cursor:pointer;transition:.18s var(--ease)}
+.drop:hover{border-color:rgba(240,185,90,.4);color:var(--t2)}
+.drop.hot{border-color:var(--gold);border-style:solid;color:var(--gold-2);background:var(--gold-soft)}
+.drop svg{width:16px;height:16px;margin:0 auto 4px;stroke:currentColor}
+.how{list-style:none;margin:auto 0 0;padding:14px 0 0;display:grid;gap:9px;font-size:12.5px;color:var(--t3)}
+.how li{display:flex;gap:9px;align-items:flex-start}
+.how .k{color:var(--gold-2);font-family:ui-monospace,Consolas,monospace;font-size:11.5px;padding-top:1px}
+
+/* 核查区 */
+.switch.tabs{margin:0 15px 0}
+.tabs button{height:29px;padding:0 12px;font-size:12.5px;color:var(--t3);border-radius:8px}
+.tabs button.on{color:var(--gold-2);background:var(--gold-soft);box-shadow:none}
+.tabs .c{font-size:11px;color:var(--t4);margin-left:5px}
+.pane-audit .body{padding:0;display:flex;flex-direction:column;flex:1}
+.pane-audit #view-pairs{display:flex;flex-direction:column;flex:1;min-height:0}
+.pane-audit .search{display:flex;gap:8px;padding:12px 15px 10px}
+.pane-audit .search input{flex:1}
+.auditwrap{flex:1;min-height:200px;max-height:min(54vh,520px);overflow:auto;overscroll-behavior:contain;padding:0 15px}
+.lookup{padding:14px 15px}
+.lookup .ask{display:flex;gap:8px}
+.lookup .ask input{flex:1}
+.out{margin-top:13px;font-size:13.5px;line-height:1.95;word-break:break-all;font-family:ui-monospace,Consolas,monospace}
+.out .ar{color:var(--t4);padding:0 7px}
+.out b{color:var(--gold-2)}
+.muted{color:var(--t3);font-family:inherit}
+.callout{margin:13px 0 0;padding:12px 13px;border-radius:11px;font-size:12.5px;line-height:1.8;
+  color:#ffd9a8;background:rgba(255,193,122,.08);border:1px solid rgba(255,193,122,.22)}
+.callout p{margin:0 0 6px}
+.callout ul{margin:0;padding-left:18px}
+.pager{display:flex;align-items:center;gap:9px;justify-content:flex-end;padding:10px 15px;border-top:1px solid var(--line-2);font-size:12px;color:var(--t4)}
+.foot{max-width:1500px;margin:0 auto;padding:0 22px 30px;color:#6b6357;font-size:11.5px;display:flex;gap:14px;flex-wrap:wrap}
+.foot b{color:var(--t3);font-weight:500}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+@media (max-width:1239px){
+  .shell{grid-template-columns:minmax(0,1fr) minmax(340px,.9fr)}
+  .pane-audit{grid-column:1 / -1}
+}
+@media (max-width:900px){
+  .gate{grid-template-columns:1fr;gap:30px;padding-top:6vh}
+  .shell{grid-template-columns:1fr;padding:16px 14px 32px}
+  .bar{height:auto;padding:10px 14px;flex-wrap:wrap;gap:10px}
+}
 </style>
 </head>
 <body>
-<div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
-<div class="wrap">
-  <header>
-    <div class="logo">Mask</div>
-    <div>
-      <h1>MCC 脱敏控制台</h1>
-      <div class="sub">本机离线 · 码本不出门 · 脱敏后发 AI，AI 产物按码本还原</div>
-    </div>
-    <div class="spacer"></div>
-    <span id="bookBadge" class="badge off">未解锁</span>
-    <button id="lockBtn" class="ghost hide">锁定</button>
-  </header>
 
-  <!-- 门禁 -->
-  <section class="card" id="gate">
-    <h2>第一步 · 打开码本</h2>
-    <div class="tabs">
-      <button class="tab on" data-tab="unlock">解锁已有码本</button>
-      <button class="tab" data-tab="new">新建码本</button>
+<header class="bar">
+  <div class="brand">
+    <span class="glyph"><svg viewBox="0 0 24 24"><path d="M12 3 4.8 6v5.8c0 4.1 3 7.4 7.2 8.7 4.2-1.3 7.2-4.6 7.2-8.7V6L12 3Z"/><path d="M9.2 12.1h5.6M9.2 15h3.4"/></svg></span>
+    <h1>MCC 脱敏控制台</h1>
+  </div>
+  <div class="gap"></div>
+  <span id="bookBadge" class="status">未解锁</span>
+  <div class="switch hide" id="modeSeg" role="tablist" aria-label="处理方向">
+    <button data-mode="mask" class="on">脱敏</button><button data-mode="unmask">还原</button>
+  </div>
+  <button id="lockBtn" class="quiet hide"><svg class="i s" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>锁定</button>
+</header>
+
+<!-- 门禁 -->
+<section id="gate" class="gate">
+  <div>
+    <h2>先打开码本</h2>
+    <p class="lede">码本是还原的唯一钥匙，口令只活在这台机器的内存里。</p>
+    <div class="switch" style="margin-bottom:16px">
+      <button data-tab="unlock" class="on">解锁已有</button><button data-tab="new">新建码本</button>
     </div>
-    <div class="row">
-      <input id="pass" type="password" placeholder="码本口令（只在内存，不落盘）" autocomplete="new-password" style="max-width:420px">
-      <button id="goBtn" class="btn">解锁</button>
-    </div>
-    <div class="tip">口令只存在这台机器的内存里：刷新页面即锁、闲置 30 分钟自动锁、锁定即覆写清零。忘记口令无法还原。</div>
+    <div class="field"><input id="pass" type="password" placeholder="码本口令" autocomplete="new-password" aria-label="码本口令"></div>
+    <button id="goBtn" class="primary wide"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>解锁进入</span></button>
     <div id="gateErr" class="err"></div>
+    <div class="fine">口令不落盘、不进日志、不进码本文件。<b>刷新页面即锁</b>，闲置 30 分钟自动锁，锁定即覆写清零；忘记口令无法还原。</div>
+  </div>
+  <ol class="steps">
+    <li><span class="n">1</span><div><h3>脱敏源数据</h3><p>勾选台账 / 报表，产出只含假值的副本。假值形似真值，车牌仍是车牌、手机号仍是 11 位，AI 照样能分析。</p></div></li>
+    <li><span class="n">2</span><div><h3>发给 AI</h3><p>发出去的是 <code>.masked</code> 副本；原件不动，码本不出门。</p></div></li>
+    <li><span class="n">3</span><div><h3>还原 AI 产物</h3><p>把 AI 返回的 md / xlsx / docx 拖回来，一键换回真值。任何含假值的文件都能还原，不必是原件。</p></div></li>
+  </ol>
+</section>
+
+<!-- 工作台 -->
+<div id="main" class="shell locked">
+  <!-- 文件 -->
+  <section class="pane pane-files">
+    <header><h2>文件</h2><span class="meta mono" id="rootPath"></span></header>
+    <nav class="path" id="crumb" aria-label="目录路径"></nav>
+    <div class="tools">
+      <button class="quiet" id="upBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg>上级</button>
+      <button class="quiet" id="uplandBtn">上传区</button>
+      <button class="quiet" id="refreshBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/></svg></button>
+      <input id="filter" type="search" class="grow" placeholder="过滤文件名" aria-label="过滤文件名">
+      <label class="check"><input type="checkbox" id="onlySupported" checked>只看支持</label>
+    </div>
+    <div class="tablewrap">
+      <table class="grid">
+        <thead><tr><th style="width:34px"></th><th>名称</th><th style="width:74px;text-align:right">大小</th><th style="width:92px;text-align:right">修改</th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+    <div class="selbar"><span id="selInfo">已选 <b>0</b> 件</span><span class="grow"></span>
+      <span>xlsx · xls · docx · doc · pptx · ppt · csv · txt · log · md · sql · H2</span></div>
   </section>
 
-  <div id="main" class="locked">
-    <!-- 工作区 -->
-    <section class="card need">
-      <h2>第二步 · 选文件（工作目录：<span id="rootPath" class="mono"></span>）</h2>
-      <div class="row" style="margin-bottom:10px">
-        <span id="crumb" class="mono dir"></span>
-        <button class="ghost" id="upBtn">上一级</button>
-        <button class="ghost" id="uplandBtn">上传区</button>
-        <button class="ghost" id="refreshBtn">刷新</button>
-        <label class="ghost" style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:11px;border:1px solid var(--line);color:var(--t2)">
-          <input type="checkbox" id="onlySupported" checked style="accent-color:var(--gold-1)">只看支持格式
-        </label>
-        <input id="filter" type="search" placeholder="按文件名过滤" style="max-width:200px">
-        <div class="spacer"></div>
-        <span class="sz" id="selInfo">已选 0</span>
+  <!-- 执行 -->
+  <section class="pane pane-run">
+    <header><h2>执行</h2><span class="meta" id="runInfo">待执行</span></header>
+    <div class="body">
+      <p class="mode-note" id="modeHint"></p>
+      <div class="runline">
+        <button id="runBtn" class="primary"><svg class="i" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7V5Z"/></svg><span id="runLabel">开始脱敏</span></button>
+        <label class="check" id="jitterWrap"><input type="checkbox" id="jitter">±3%</label>
       </div>
-      <div class="list" id="list"></div>
-      <div class="tip">支持：xlsx / xls / docx / doc / pptx / ppt / csv / txt·log·md / sql / H2 .mv.db。PDF 只检测报告，不替换。</div>
-    </section>
-
-    <div class="grid2">
-      <section class="card need">
-        <h2>第三步 · 执行</h2>
-        <div class="tabs">
-          <button class="tab on" data-mode="mask">脱敏（源数据 → 假值件）</button>
-          <button class="tab" data-mode="unmask">还原（AI 产物 → 真值件）</button>
-        </div>
-        <div class="row">
-          <button id="runBtn" class="btn">开始</button>
-          <label style="color:var(--t2);font-size:12px;display:flex;gap:6px;align-items:center" id="jitterWrap">
-            <input type="checkbox" id="jitter" style="accent-color:var(--gold-1)">数值 ±3% 微扰
-          </label>
-          <span class="sz" id="runInfo"></span>
-        </div>
-        <div class="bar"><i id="bar"></i></div>
-        <div class="red-tip">还原：把 AI 返回的文件放进工作目录（或下面拖入上传区）再执行。产物名后缀 <span class="mono">.masked</span> / <span class="mono">.restored</span>，原文件不动。</div>
-        <div class="cards" id="results" style="margin-top:12px"></div>
-      </section>
-
-      <section class="card need">
-        <h2>拖入 AI 产物（落工作目录 .mcc-upload/）</h2>
-        <div class="drop" id="drop">把 md / xlsx / docx / csv / txt 拖到这里，或点击选择</div>
-        <input type="file" id="file" class="hide" multiple>
-        <div class="tip">上限 512MB/件；重名自动加序号。上传后可在「上传区」勾选并还原。</div>
-        <div id="upErr" class="err"></div>
-      </section>
+      <div class="rail"><span id="progTxt">待执行</span><span class="track"><i id="bar"></i></span></div>
+      <div class="results" id="results"></div>
+      <ul class="how" id="how">
+        <li><span class="k">1</span><span>左边勾文件（可多选），点「开始脱敏」</span></li>
+        <li><span class="k">2</span><span>发出去的只有 <code>.masked</code> 副本</span></li>
+        <li><span class="k">3</span><span>AI 产物拖到下面，切「还原」再点一次</span></li>
+      </ul>
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V5m0 0L8 9m4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+        拖入 AI 产物（或点击选择）· 单件 ≤512MB
+      </div>
+      <input type="file" id="file" class="hide" multiple>
+      <div id="upErr" class="err" style="color:var(--red);font-size:12.5px;min-height:18px;margin-top:8px"></div>
     </div>
+  </section>
 
-    <!-- 对照表 -->
-    <section class="card need">
-      <h2>对照表（含原值，严禁外发）</h2>
-      <div class="row" style="margin-bottom:8px">
-        <input id="pq" type="search" placeholder="搜索原值或假值" style="max-width:280px">
-        <button class="ghost" id="pSearch">搜索</button>
-        <div class="spacer"></div>
-        <button class="danger" id="exportBtn">导出对照表 CSV</button>
+  <!-- 核查 -->
+  <aside class="pane pane-audit">
+    <header>
+      <div class="switch tabs" role="tablist">
+        <button data-view="pairs" class="on">对照表<span class="c" id="pairN">0</span></button>
+        <button data-view="lookup">反查</button>
+        <button data-view="warn">凭据告警<span class="c" id="warnN">0</span></button>
       </div>
-      <div class="list" style="max-height:300px">
-        <table><thead><tr><th>类别</th><th>原值</th><th>假值</th><th></th></tr></thead>
-        <tbody id="pairs"></tbody></table>
+    </header>
+    <div class="body">
+      <div id="view-pairs">
+        <div class="search">
+          <input id="pq" type="search" placeholder="搜原值或假值" aria-label="搜索对照表">
+          <button class="quiet" id="pSearch"><svg class="i s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-3.6-3.6"/></svg></button>
+          <button class="quiet" id="clearQ">清空</button>
+        </div>
+        <div class="auditwrap">
+          <table class="grid"><thead><tr><th style="width:56px">类别</th><th>原值</th><th>假值</th><th style="width:46px"></th></tr></thead>
+            <tbody id="pairs"></tbody></table>
+        </div>
+        <div class="pager"><span id="pInfo"></span>
+          <button class="quiet" id="pPrev">上一页</button><button class="quiet" id="pNext">下一页</button>
+          <button class="danger" id="exportBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 18h14"/></svg>导出 CSV</button>
+        </div>
       </div>
-      <div class="pager"><span id="pInfo"></span><button class="ghost" id="pPrev">上一页</button><button class="ghost" id="pNext">下一页</button></div>
-    </section>
 
-    <!-- 反查 -->
-    <section class="card need">
-      <h2>单点反查</h2>
-      <div class="row">
-        <input id="lv" type="text" placeholder="贴一个假值（或原值）" style="max-width:340px">
-        <button class="ghost" id="lookupBtn">假 → 真</button>
-        <button class="ghost" id="lookupRevBtn">真 → 假</button>
+      <div id="view-lookup" class="hide lookup">
+        <div class="ask">
+          <input id="lv" type="text" placeholder="贴假值（或原值）" aria-label="要查的值">
+          <button class="quiet" id="lookupBtn">假 → 真</button>
+          <button class="quiet" id="lookupRevBtn">真 → 假</button>
+        </div>
+        <div id="lkOut" class="out"></div>
+        <p class="callout" style="background:var(--panel-2);border-color:var(--line-2);color:var(--t3)">未命中会直接说「不在码本里」。通常是被 AI 改写、翻译或截断过，可以拿原文片段再查一次。</p>
       </div>
-      <div id="lkOut" class="mono" style="margin-top:10px"></div>
-    </section>
-  </div>
+
+      <div id="view-warn" class="hide lookup">
+        <div id="warnList"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="foot">
+  <span>MCC 脱敏控制台 <b id="ver">v1.1.0</b></span>
+  <span>仅监听 127.0.0.1</span>
+  <span>页面零外链，断网可用</span>
+  <span>码本不上云、不进 git</span>
 </div>
 
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-let unlocked=false, dir="", entries=[], page=1, total=0, mode="mask", tab="unlock";
+const ICON={
+  file:'<svg class="i s" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>',
+  sheet:'<svg class="i s" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/></svg>',
+  text:'<svg class="i s" viewBox="0 0 24 24"><path d="M5 6h14M5 11h14M5 16h9"/></svg>',
+  db:'<svg class="i s" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>',
+  folder:'<svg class="i s" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>',
+  down:'<svg class="i s" viewBox="0 0 24 24"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 18h14"/></svg>',
+  copy:'<svg class="i s" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>',
+  warn:'<svg class="i s" viewBox="0 0 24 24"><path d="M12 4l8 14H4l8-14Z"/><path d="M12 10v4M12 16.5v.5"/></svg>',
+  blank:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 7a2 2 0 0 1 2-2h3.5l2 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"/><path d="M9 13h6"/></svg>'
+};
+const EXT={sheet:/\.(xlsx|xlsm|xls)$/,text:/\.(txt|log|md|sql|csv)$/,db:/\.(mv\.db|mccbak)$/,pdf:/\.pdf$/};
+const MODE={
+  mask:{label:'开始脱敏',note:'<b>脱敏</b>：勾选的源数据换成假值，产出 <code>.masked</code> 副本，原件不动。'},
+  unmask:{label:'开始还原',note:'<b>还原</b>：把 AI 回来的文件换回真值，产出 <code>.restored</code> 副本。'}
+};
+let unlocked=false, dir='', entries=[], page=1, total=0, mode='mask', tab='unlock', warns=[];
 
-async function api(path,opts){
-  const r=await fetch(path,Object.assign({headers:{}},opts));
-  const ct=r.headers.get("Content-Type")||"";
-  if(ct.includes("application/json")){const j=await r.json(); if(!r.ok||j.ok===false) throw new Error(j.error||("HTTP "+r.status)); return j;}
-  if(!r.ok) throw new Error("HTTP "+r.status);
-  return r;
+async function api(p,o){
+  const r=await fetch(p,Object.assign({headers:{}},o));
+  const ct=r.headers.get('Content-Type')||'';
+  if(ct.includes('application/json')){const j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||('HTTP '+r.status));return j}
+  if(!r.ok)throw new Error('HTTP '+r.status);return r;
 }
-function jbody(o){return {headers:{"Content-Type":"application/json"},body:JSON.stringify(o)}}
+const jbody=o=>({headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});
+const post=(p,b)=>api(p,Object.assign({method:'POST'},jbody(b)));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sz=b=>b>1048576?(b/1048576).toFixed(1)+' MB':b>1024?Math.round(b/1024)+' KB':b+' B';
+const short=s=>s.length>13?s.slice(0,13)+'…':s;
+const iconFor=n=>EXT.sheet.test(n)?ICON.sheet:EXT.db.test(n)?ICON.db:EXT.text.test(n)?ICON.text:EXT.pdf.test(n)?ICON.file:ICON.file;
 
+/* ---------- 状态 ---------- */
 async function refreshState(){
   try{
-    const s=await api("/api/state");
-    unlocked=s.unlocked; $("#rootPath").textContent=s.root;
-    $("#bookBadge").className="badge"+(unlocked?"":" off");
-    $("#bookBadge").textContent=unlocked?("已解锁 · 映射 "+s.mapped+" 条 · 经手 "+s.files.length+" 件"):"未解锁";
-    $("#gate").classList.toggle("hide",unlocked);
-    $("#main").classList.toggle("locked",!unlocked);
-    $("#lockBtn").classList.toggle("hide",!unlocked);
-    if(unlocked){ await loadList(); await loadPairs(); }
-  }catch(e){ $("#gateErr").textContent=e.message; }
+    const s=await api('/api/state');unlocked=s.unlocked;
+    $('#rootPath').textContent=s.root;$('#ver').textContent='v'+s.version;
+    const b=$('#bookBadge');
+    b.className='status'+(unlocked?' on':'');
+    b.innerHTML='<span class="bead"></span>'+(unlocked?`已解锁 · ${s.mapped} 条映射 · 经手 ${s.files.length} 件`:'未解锁');
+    $('#gate').classList.toggle('hide',unlocked);
+    $('#main').classList.toggle('locked',!unlocked);
+    $('#lockBtn').classList.toggle('hide',!unlocked);
+    $('#modeSeg').classList.toggle('hide',!unlocked);
+    if(unlocked){await loadList();await loadPairs();}
+  }catch(e){$('#gateErr').textContent=e.message}
 }
 
+/* ---------- 文件 ---------- */
 async function loadList(){
-  entries=await (await api("/api/ls?dir="+encodeURIComponent(dir))).entries;
-  const f=$("#filter").value.trim().toLowerCase(), onlyS=$("#onlySupported").checked;
+  entries=(await api('/api/ls?dir='+encodeURIComponent(dir))).entries;
+  const f=$('#filter').value.trim().toLowerCase(), onlyS=$('#onlySupported').checked;
   const rows=entries.filter(e=>!f||e.name.toLowerCase().includes(f)).filter(e=>e.dir||!onlyS||e.supported);
-  $("#crumb").textContent="根目录"+(dir?" / "+dir:"");
-  $("#list").innerHTML=rows.map(e=>e.dir
-    ? `<div style="padding:7px 11px"><span class="dir mono" data-cd="${esc(e.rel)}">▸ ${esc(e.name)}/</span></div>`
-    : `<label><input type="checkbox" class="fchk" value="${esc(e.rel)}" ${e.supported?"":"disabled"}>
-        <span class="mono">${esc(e.name)}</span><span class="sz">${sz(e.size)}</span><span class="sz">${esc(e.mtime)}</span>
-        ${e.supported?"":'<span class="na">不支持</span>'}</label>`).join("")||'<div class="tip" style="padding:11px">这里没有可处理的文件</div>';
-  $$("#list .dir").forEach(a=>a.onclick=()=>{dir=a.dataset.cd;loadList()});
-  $$(".fchk").forEach(c=>c.onchange=selInfo);
+  const segs=dir?dir.split('/'):[];
+  $('#crumb').innerHTML=`<button data-go="">根目录</button>`+segs.map((s,i)=>
+    `<span class="sl">/</span><button data-go="${esc(segs.slice(0,i+1).join('/'))}" class="${i===segs.length-1?'here':''}">${esc(s)}</button>`).join('');
+  $$('#crumb button').forEach(b=>b.onclick=()=>{dir=b.dataset.go;loadList()});
+  $('#list').innerHTML=rows.map(e=>e.dir
+    ? `<tr class="dir"><td></td><td class="nm"><span class="wrap"><span class="ig">${ICON.folder}</span><span class="txt" data-cd="${esc(e.rel)}">${esc(e.name)}</span></span></td><td class="num">目录</td><td class="num"></td></tr>`
+    : `<tr class="${e.supported?'':'no'}"><td><input type="checkbox" class="fchk" value="${esc(e.rel)}" ${e.supported?'':'disabled'} aria-label="${esc(e.name)}"></td>
+        <td class="nm"><span class="wrap"><span class="ig">${iconFor(e.name)}</span><span class="txt" title="${esc(e.name)}">${esc(e.name)}</span>${e.supported?'':'<span class="chip">不支持</span>'}</span></td>
+        <td class="num">${sz(e.size)}</td><td class="num">${esc(e.mtime.slice(5,16))}</td></tr>`).join('')
+    || `<tr><td colspan="4"><div class="blank">${ICON.blank}这里没有可处理的文件<br>换个目录，或把 AI 产物拖到右侧上传区</div></td></tr>`;
+  $$('#list [data-cd]').forEach(a=>a.onclick=()=>{dir=a.dataset.cd;loadList()});
+  $$('.fchk').forEach(c=>c.onchange=()=>{c.closest('tr').classList.toggle('pick',c.checked);selInfo()});
   selInfo();
 }
-function selInfo(){const n=$$(".fchk:checked").length;$("#selInfo").textContent="已选 "+n}
-function sz(b){return b>1048576?(b/1048576).toFixed(1)+" MB":b>1024?(b/1024).toFixed(0)+" KB":b+" B"}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-
-async function loadPairs(){
-  const j=await api(`/api/pairs?q=${encodeURIComponent($("#pq").value)}&page=${page}`);
-  total=j.total;page=j.page;
-  $("#pairs").innerHTML=j.rows.map(r=>`<tr><td>${esc(r.rule)}</td><td class="mono">${esc(r.orig)}</td>
-    <td class="mono">${esc(r.fake)}</td><td><button class="ghost" data-cp="${esc(r.orig)}">复制原值</button></td></tr>`).join("")
-    ||'<tr><td colspan="4" class="tip">还没有映射——先跑一次脱敏</td></tr>';
-  $$("#pairs [data-cp]").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.dataset.cp);b.textContent="已复制"});
-  const pages=Math.max(1,Math.ceil(total/j.pageSize));
-  $("#pInfo").textContent=`共 ${total} 条 · 第 ${page}/${pages} 页`;
+function selInfo(){
+  const c=$$('.fchk:checked');
+  $('#selInfo').innerHTML=c.length
+    ? `已选 <b>${c.length}</b> 件 · ${esc(c.map(x=>short(x.value.split('/').pop())).slice(0,2).join('、'))}${c.length>2?` 等 ${c.length} 件`:''}`
+    : '已选 <b>0</b> 件';
 }
 
+/* ---------- 对照表 ---------- */
+async function loadPairs(){
+  const j=await api(`/api/pairs?q=${encodeURIComponent($('#pq').value)}&page=${page}`);
+  total=j.total;page=j.page;$('#pairN').textContent=j.total;
+  $('#pairs').innerHTML=j.rows.map(r=>`<tr><td><span class="chip gold">${esc(r.rule)}</span></td>
+      <td class="nm"><span class="wrap"><span class="txt" title="${esc(r.orig)}">${esc(r.orig)}</span></span></td>
+      <td class="nm"><span class="wrap"><span class="txt" style="color:var(--gold-2)" title="${esc(r.fake)}">${esc(r.fake)}</span></span></td>
+      <td><button class="quiet" style="width:28px;padding:0" data-cp="${esc(r.orig)}" title="复制原值" aria-label="复制原值">${ICON.copy}</button></td></tr>`).join('')
+    || `<tr><td colspan="4"><div class="blank">${ICON.blank}还没有映射<br>先跑一次脱敏</div></td></tr>`;
+  $$('#pairs [data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);b.innerHTML='已复制';b.style.width='auto'}catch(e){b.innerHTML='失败'}});
+  const pages=Math.max(1,Math.ceil(total/j.pageSize));
+  $('#pInfo').textContent=`共 ${total} 条 · ${page}/${pages} 页`;
+}
+function renderWarns(){
+  $('#warnN').textContent=warns.length;
+  $('#warnList').innerHTML=warns.length
+    ? `<div class="callout"><p><b>检测到疑似凭据，按设计一律不替换</b>（替换会毁掉你的授权与密钥）。发 AI 前请人工确认：</p>
+       <ul>${warns.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`
+    : `<div class="blank">${ICON.blank}本会话没有检测到疑似凭据<br>下载码 / 客户码 / 私钥 / 口令哈希 出现时会列在这里</div>`;
+}
+
+/* ---------- 执行 ---------- */
 async function run(){
-  const files=$$(".fchk:checked").map(c=>c.value);
-  if(!files.length){$("#runInfo").textContent="先勾选文件";return}
-  $("#runBtn").disabled=true;$("#results").innerHTML="";$("#bar").style.width="0%";
-  let done=0, all=[];
+  const files=$$('.fchk:checked').map(c=>c.value);
+  if(!files.length){$('#runInfo').textContent='先勾选文件';return}
+  const btn=$('#runBtn');btn.disabled=true;btn.querySelector('svg').classList.add('spin');
+  $('#results').innerHTML='';$('#bar').style.width='0%';$('#progTxt').textContent='0 / '+files.length;
+  let done=0;const all=[];
   for(const f of files){
-    try{
-      const j=await api("/api/run",Object.assign({method:"POST"},jbody({mode,files:[f],jitter:$("#jitter").checked})));
-      all.push(j.results[0]);
-    }catch(e){ all.push({file:f,ok:false,error:e.message}); }
-    done++;$("#bar").style.width=Math.round(done/files.length*100)+"%";
+    try{const j=await api('/api/run',Object.assign({method:'POST'},jbody({mode,files:[f],jitter:$('#jitter').checked})));all.push(j.results[0])}
+    catch(e){all.push({file:f,ok:false,error:e.message})}
+    done++;$('#bar').style.width=Math.round(done/files.length*100)+'%';$('#progTxt').textContent=done+' / '+files.length;
   }
   const ok=all.filter(r=>r.ok).length;
-  $("#runInfo").textContent=`${ok} 成功 / ${all.length-ok} 失败`;
-  $("#results").innerHTML=all.map(r=>r.ok?`
-    <div class="res"><div class="k">${esc(r.file)} → <b class="mono">${esc(r.out)}</b></div>
-      <div>替换 <b>${r.hits}</b> 处</div>
-      ${(r.warnings||[]).map(w=>`<div class="warn">⚠ ${esc(w)}</div>`).join("")}
-      <div class="row" style="margin-top:6px">
-        <a class="ghost" style="text-decoration:none;padding:7px 13px;display:inline-block;border-radius:11px;border:1px solid var(--line);color:var(--t2)"
-           href="/file?path=${encodeURIComponent(r.out)}" download>下载产物</a>
-        <button class="ghost" data-copy="${esc(r.out)}">复制产物路径</button>
-      </div></div>`
-    :`<div class="res bad"><div class="k">${esc(r.file)}</div><div class="err">${esc(r.error||"失败")}</div></div>`).join("");
-  $$("#results [data-copy]").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.dataset.copy);b.textContent="已复制"});
-  $("#runBtn").disabled=false;
-  await loadPairs(); await refreshState();
+  $('#runInfo').textContent=`${ok} 成功 · ${all.length-ok} 失败`;
+  all.forEach(r=>(r.warnings||[]).forEach(w=>{if(!warns.includes(r.file+' → '+w))warns.push(r.file+' → '+w)}));
+  renderWarns();
+  $('#results').innerHTML=all.map((r,i)=>r.ok
+    ? `<article class="res" style="animation:rise .32s var(--ease) both;animation-delay:${i*36}ms">
+        <span class="dot"></span><div class="lines">
+          <div class="f">${esc(r.file)}<em>→</em>${esc(r.out)}</div>
+          <div class="hits">替换 <b>${r.hits}</b> 处</div>
+          ${(r.warnings||[]).map(w=>`<div class="note">${esc(w)}</div>`).join('')}
+          <div class="ops"><a class="act quiet" href="/file?path=${encodeURIComponent(r.out)}" download>${ICON.down}下载产物</a>
+            <button class="quiet" data-copy="${esc(r.out)}">${ICON.copy}复制路径</button></div>
+        </div></article>`
+    : `<article class="res bad" style="animation:rise .32s var(--ease) both;animation-delay:${i*36}ms">
+        <span class="dot"></span><div class="lines">
+          <div class="f">${esc(r.file)}</div><div class="why">${esc(r.error||'未知错误')}</div></div></article>`).join('');
+  $$('#results [data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='已复制'}catch(e){}});
+  btn.disabled=false;btn.querySelector('svg').classList.remove('spin');
+  await loadPairs();await refreshState();
 }
-
 async function upload(files){
-  $("#upErr").textContent="";
+  $('#upErr').textContent='';
   for(const f of files){
-    const fd=new FormData(); fd.append("file",f,f.name);
-    try{ const j=await api("/api/upload",{method:"POST",body:fd});
-      $("#runInfo").textContent="已收: "+j.rel;
-    }catch(e){ $("#upErr").textContent=e.message; }
+    const fd=new FormData();fd.append('file',f,f.name);
+    try{const j=await api('/api/upload',{method:'POST',body:fd});$('#runInfo').textContent='已收 '+j.name}
+    catch(e){$('#upErr').textContent=e.message}
   }
-  dir=".mcc-upload"; await loadList();
-  $$(".fchk").forEach(c=>c.checked=true); selInfo();
+  dir='.mcc-upload';await loadList();
+  $$('.fchk').forEach(c=>{c.checked=true;c.closest('tr').classList.add('pick')});selInfo();
 }
+function setMode(m){
+  mode=m;$$('[data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode===m));
+  $('#runLabel').textContent=MODE[m].label;$('#modeHint').innerHTML=MODE[m].note;
+  $('#jitterWrap').classList.toggle('hide',m!=='mask');
+}
+function setView(v){$$('[data-view]').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
+  ['pairs','lookup','warn'].forEach(k=>$('#view-'+k).classList.toggle('hide',k!==v));}
 
-// 事件
-$$("[data-tab]").forEach(b=>b.onclick=()=>{
-  tab=b.dataset.tab;$$("[data-tab]").forEach(x=>x.classList.toggle("on",x===b));
-  $("#goBtn").textContent=tab==="new"?"新建并进入":"解锁";
-});
-$("#goBtn").onclick=async()=>{
-  const pass=$("#pass").value;
-  if(!pass){$("#gateErr").textContent="口令不能为空";return}
-  $("#gateErr").textContent="";$("#goBtn").disabled=true;
-  try{
-    await api(tab==="new"?"/api/book/new":"/api/book/unlock",Object.assign({method:"POST"},jbody({pass})));
-    $("#pass").value="";await refreshState();
-  }catch(e){ $("#gateErr").textContent=e.message; $("#pass").value=""; }
-  $("#goBtn").disabled=false;
+/* ---------- 事件 ---------- */
+$$('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('[data-tab]').forEach(x=>x.classList.toggle('on',x===b));
+  $('#goBtn').querySelector('span').textContent=tab==='new'?'新建并进入':'解锁进入'});
+$('#goBtn').onclick=async()=>{
+  const pass=$('#pass').value;
+  if(!pass){$('#gateErr').textContent='口令不能为空';return}
+  $('#gateErr').textContent='';const b=$('#goBtn');b.disabled=true;b.querySelector('svg').classList.add('spin');
+  try{await post(tab==='new'?'/api/book/new':'/api/book/unlock',{pass});$('#pass').value='';await refreshState()}
+  catch(e){$('#gateErr').textContent=e.message;$('#pass').value=''}
+  b.disabled=false;b.querySelector('svg').classList.remove('spin');
 };
-$("#pass").onkeydown=e=>{if(e.key==="Enter")$("#goBtn").click()};
-$("#lockBtn").onclick=async()=>{try{await api("/api/lock",{method:"POST"})}catch(e){}await refreshState()};
-$$("[data-mode]").forEach(b=>b.onclick=()=>{
-  mode=b.dataset.mode;$$("[data-mode]").forEach(x=>x.classList.toggle("on",x===b));
-  $("#jitterWrap").style.display=mode==="mask"?"flex":"none";
-});
-$("#runBtn").onclick=run;
-$("#refreshBtn").onclick=loadList;
-$("#upBtn").onclick=()=>{const i=dir.lastIndexOf("/");dir=i<0?"":dir.slice(0,i);loadList()};
-$("#uplandBtn").onclick=()=>{dir=".mcc-upload";loadList()};
-$("#onlySupported").onchange=loadList; $("#filter").oninput=loadList;
-$("#pSearch").onclick=()=>{page=1;loadPairs()};
-$("#pq").onkeydown=e=>{if(e.key==="Enter"){page=1;loadPairs()}};
-$("#pPrev").onclick=()=>{if(page>1){page--;loadPairs()}};
-$("#pNext").onclick=()=>{if(page*200<total){page++;loadPairs()}};
-$("#exportBtn").onclick=()=>{
-  if(!confirm("对照表含原值，导出后严禁发给 AI 或外发。确认导出？"))return;
-  location.href="/api/export/pairs";
-};
-$("#lookupBtn").onclick=()=>lookup(false);
-$("#lookupRevBtn").onclick=()=>lookup(true);
+$('#pass').onkeydown=e=>{if(e.key==='Enter')$('#goBtn').click()};
+$('#lockBtn').onclick=async()=>{try{await post('/api/lock',{})}catch(e){}await refreshState()};
+$$('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$$('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+$('#runBtn').onclick=run;
+$('#refreshBtn').onclick=loadList;
+$('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');dir=i<0?'':dir.slice(0,i);loadList()};
+$('#uplandBtn').onclick=()=>{dir='.mcc-upload';loadList()};
+$('#onlySupported').onchange=loadList;$('#filter').oninput=loadList;
+$('#pSearch').onclick=()=>{page=1;loadPairs()};
+$('#clearQ').onclick=()=>{$('#pq').value='';page=1;loadPairs()};
+$('#pq').onkeydown=e=>{if(e.key==='Enter'){page=1;loadPairs()}};
+$('#pPrev').onclick=()=>{if(page>1){page--;loadPairs()}};
+$('#pNext').onclick=()=>{if(page*200<total){page++;loadPairs()}};
+$('#exportBtn').onclick=()=>{if(confirm('对照表含原值，导出后严禁发给 AI 或外发。确认导出？'))location.href='/api/export/pairs'};
+$('#lookupBtn').onclick=()=>lookup(false);$('#lookupRevBtn').onclick=()=>lookup(true);
 async function lookup(rev){
-  const v=$("#lv").value.trim(); $("#lkOut").innerHTML="";
-  if(!v){$("#lkOut").textContent="先填值";return}
+  const v=$('#lv').value.trim();$('#lkOut').innerHTML='';
+  if(!v){$('#lkOut').innerHTML='<span class="muted">先填要查的值</span>';return}
   try{
-    const j=await api("/api/lookup",Object.assign({method:"POST"},jbody({value:v,rev})));
-    if(rev){
-      $("#lkOut").innerHTML=(j.hits||[]).length?j.hits.map(h=>`${esc(h.orig)} → <b>${esc(h.fake)}</b>`).join("<br>"):"没命中（未识别到敏感串）";
-    }else{
-      $("#lkOut").innerHTML=j.hit?`${esc(v)} → <b>${esc(j.orig)}</b>`
-        :'<span class="warn">不在码本里（可能被 AI 改写、翻译或截断过）</span>';
-    }
-  }catch(e){$("#lkOut").innerHTML='<span class="err">'+esc(e.message)+"</span>"}
+    const j=await post('/api/lookup',{value:v,rev});
+    if(rev)$('#lkOut').innerHTML=(j.hits||[]).length
+      ? j.hits.map(h=>`${esc(h.orig)}<span class="ar">→</span><b>${esc(h.fake)}</b>`).join('<br>')
+      : '<span class="muted">没识别到敏感串（按规则形匹配原值→假值）</span>';
+    else $('#lkOut').innerHTML=j.hit
+      ? `${esc(v)}<span class="ar">→</span><b>${esc(j.orig)}</b>`
+      : '<span style="color:var(--warn)">不在码本里，可能被 AI 改写、翻译或截断过</span>';
+  }catch(e){$('#lkOut').innerHTML='<span style="color:#ff9fb0">'+esc(e.message)+'</span>'}
 }
-const drop=$("#drop");
-drop.onclick=()=>$("#file").click();
-drop.ondragover=e=>{e.preventDefault();drop.classList.add("hot")};
-drop.ondragleave=()=>drop.classList.remove("hot");
-drop.ondrop=e=>{e.preventDefault();drop.classList.remove("hot");upload([...e.dataTransfer.files])};
-$("#file").onchange=e=>upload([...e.target.files]);
-// 刷新即锁：口令不进 sessionStorage，页面 unload 时主动清内存
-addEventListener("pagehide",()=>{navigator.sendBeacon("/api/lock",new Blob(["{}"],{type:"text/plain"}))});
-refreshState();
+const drop=$('#drop');
+drop.onclick=()=>$('#file').click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot')};
+drop.ondragleave=()=>drop.classList.remove('hot');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot');upload([...e.dataTransfer.files])};
+$('#file').onchange=e=>upload([...e.target.files]);
+addEventListener('pagehide',()=>{navigator.sendBeacon('/api/lock',new Blob(['{}'],{type:'text/plain'}))});
+const st=document.createElement('style');
+st.textContent='@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}';
+document.head.appendChild(st);
+setMode('mask');setView('pairs');renderWarns();refreshState();
 </script>
 </body>
 </html>
