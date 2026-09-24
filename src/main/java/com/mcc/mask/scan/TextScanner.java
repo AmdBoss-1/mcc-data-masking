@@ -34,6 +34,43 @@ public final class TextScanner {
                 warnings.add("疑似凭据: " + kw);
             }
         }
+        List<Hit> hits = collectHits(text);
+        hits.sort(Comparator.comparingInt(Hit::start));
+        StringBuilder sb = new StringBuilder();
+        int pos = 0;
+        for (Hit h : hits) {
+            sb.append(text, pos, h.start());
+            sb.append(fakeFor(h));
+            pos = h.end();
+        }
+        sb.append(text.substring(pos));
+        return new ScanResult(sb.toString(), hits.size(), warnings);
+    }
+
+    /** 与 maskText 相同的命中逻辑，但返回 {原值,假值} 对（供 run 级替换使用）。 */
+    public List<String[]> maskPairs(String text) {
+        List<String[]> pairs = new ArrayList<>();
+        for (Hit h : collectHits(text)) {
+            pairs.add(new String[] {h.orig(), fakeFor(h)});
+        }
+        return pairs;
+    }
+
+    /** unmask 用：码本中出现在 text 里的假值 → {假值,原值}，最长优先。 */
+    public List<String[]> unmaskPairs(String text) {
+        List<String[]> pairs = new ArrayList<>();
+        for (Map<String, String> m : book.maps().values()) {
+            for (Map.Entry<String, String> e : m.entrySet()) {
+                if (text.contains(e.getValue())) {
+                    pairs.add(new String[] {e.getValue(), e.getKey()});
+                }
+            }
+        }
+        pairs.sort(Comparator.comparingInt((String[] p) -> p[0].length()).reversed());
+        return pairs;
+    }
+
+    private List<Hit> collectHits(String text) {
         List<Hit> hits = new ArrayList<>();
         for (RuleTable.StructRule rule : rules.structRules()) {
             Matcher m = rule.pattern().matcher(text);
@@ -46,18 +83,13 @@ public final class TextScanner {
                 }
             }
         }
-        hits.sort(Comparator.comparingInt(Hit::start));
-        StringBuilder sb = new StringBuilder();
-        int pos = 0;
-        for (Hit h : hits) {
-            sb.append(text, pos, h.start());
-            Transformer t = rules.transformerFor(h.ruleId());
-            String ruleId = h.ruleId();
-            sb.append(book.getOrFake(ruleId, h.orig(), orig -> t.fake(orig, seed(ruleId, orig))));
-            pos = h.end();
-        }
-        sb.append(text.substring(pos));
-        return new ScanResult(sb.toString(), hits.size(), warnings);
+        return hits;
+    }
+
+    private String fakeFor(Hit h) {
+        Transformer t = rules.transformerFor(h.ruleId());
+        String rid = h.ruleId();
+        return book.getOrFake(rid, h.orig(), orig -> t.fake(orig, seed(rid, orig)));
     }
 
     public ScanResult unmaskText(String text) {

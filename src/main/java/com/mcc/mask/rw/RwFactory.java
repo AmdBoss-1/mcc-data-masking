@@ -26,6 +26,8 @@ public final class RwFactory {
         REG.put(".xlsx", xlsx);
         REG.put(".xlsm", xlsx);
         REG.put(".xls", new XlsRw());
+        REG.put(".docx", new DocxRw());
+        REG.put(".pptx", new PptxRw());
     }
 
     /** 后续任务注册新读写器（T8-T12）。 */
