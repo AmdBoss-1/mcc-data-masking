@@ -129,6 +129,7 @@ table.grid th{position:sticky;top:0;z-index:1;text-align:left;font-size:11.5px;f
 table.grid td{padding:8px 10px;border-bottom:1px solid var(--line-2);font-size:13px;vertical-align:middle}
 table.grid tbody tr:hover td{background:rgba(255,255,255,.035)}
 table.grid tbody tr.pick td{background:rgba(240,185,90,.07)}
+table.grid tbody tr.pickable{cursor:pointer}
 td.num{text-align:right;color:var(--t3);font-size:12px;white-space:nowrap}
 td.nm{max-width:0;width:60%}
 .nm .wrap{display:flex;align-items:center;gap:9px;min-width:0}
@@ -160,8 +161,17 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-2));
   transition:width .3s var(--ease)}
 .results{margin-top:13px;display:grid;gap:8px;flex:1;min-height:0;max-height:min(40vh,380px);overflow:auto;overscroll-behavior:contain;align-content:start}
-.res{display:grid;grid-template-columns:auto minmax(0,1fr);gap:11px;padding:11px 12px;border-radius:11px;
+.res{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;padding:11px 12px;border-radius:11px;
   background:var(--panel-2);border:1px solid var(--line-2)}
+.res.pickable{cursor:pointer}
+.res.pickable:hover{background:rgba(255,255,255,.05)}
+.res.pick{border-color:rgba(240,185,90,.34);background:rgba(240,185,90,.07)}
+.rsel{display:flex;align-items:flex-start;padding-top:5px}
+.rsel input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
+.resbar{display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border-radius:9px;
+  background:var(--panel-2);border:1px solid var(--line-2);font-size:12.5px;color:var(--t3)}
+.resbar .meta{color:var(--t2)}
+.resbar .grow{flex:1}
 .res.bad{background:rgba(255,92,120,.07);border-color:rgba(255,92,120,.24)}
 .res .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);margin-top:7px}
 .res.bad .dot{background:var(--red)}
@@ -287,6 +297,13 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
         <label class="check" id="jitterWrap"><input type="checkbox" id="jitter">±3%</label>
       </div>
       <div class="rail"><span id="progTxt">待执行</span><span class="track"><i id="bar"></i></span></div>
+      <div class="resbar hide" id="resBar">
+        <label class="check"><input type="checkbox" id="allRes" checked>全选</label>
+        <span class="meta" id="resSel">已选 0</span>
+        <span class="grow"></span>
+        <button class="quiet" id="zipBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 18h14"/></svg>打包下载</button>
+        <button class="quiet" id="cpAllBtn"><svg class="i s" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>复制路径</button>
+      </div>
       <div class="results" id="results"></div>
       <ul class="how" id="how">
         <li><span class="k">1</span><span>左边勾文件（可多选），点「开始脱敏」</span></li>
@@ -322,7 +339,7 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
           <table class="grid"><thead><tr><th style="width:56px">类别</th><th>原值</th><th>假值</th><th style="width:46px"></th></tr></thead>
             <tbody id="pairs"></tbody></table>
         </div>
-        <div class="pager"><span id="pInfo"></span>
+        <div class="pager"><span id="pScope"></span><span class="grow" style="flex:1"></span><span id="pInfo"></span>
           <button class="quiet" id="pPrev">上一页</button><button class="quiet" id="pNext">下一页</button>
           <button class="danger" id="exportBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 18h14"/></svg>导出 CSV</button>
         </div>
@@ -370,7 +387,7 @@ const MODE={
   mask:{label:'开始脱敏',note:'<b>脱敏</b>：勾选的源数据换成假值，产出 <code>.masked</code> 副本，原件不动。'},
   unmask:{label:'开始还原',note:'<b>还原</b>：把 AI 回来的文件换回真值，产出 <code>.restored</code> 副本。'}
 };
-let unlocked=false, dir='', entries=[], page=1, total=0, mode='mask', tab='unlock', warns=[];
+let unlocked=false, dir='', entries=[], page=1, total=0, mode='mask', tab='unlock', warns=[], scopeAll=false;
 const UPLOAD_DIR='.mcc-upload';
 
 async function api(p,o){
@@ -430,6 +447,16 @@ async function loadList(){
         : '这里没有可处理的文件<br>换个目录，或把 AI 产物拖到右侧上传区'}</div></td></tr>`;
   const pick=$('#upPick');if(pick)pick.onclick=()=>$('#file').click();
   $$('#list [data-cd]').forEach(a=>a.onclick=()=>{dir=a.dataset.cd;loadList()});
+  $$('#list tr').forEach(tr=>{
+    const cb=tr.querySelector('.fchk');
+    if(!cb||cb.disabled)return;
+    tr.classList.add('pickable');
+    tr.onclick=e=>{
+      if(e.target===cb||e.target.closest('button,a'))return;   // 勾选框/按钮自己处理
+      cb.checked=!cb.checked;
+      cb.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+  });
   $$('.fchk').forEach(c=>c.onchange=()=>{c.closest('tr').classList.toggle('pick',c.checked);selInfo()});
   selInfo();
 }
@@ -442,14 +469,24 @@ function selInfo(){
 
 /* ---------- 对照表 ---------- */
 async function loadPairs(){
-  const j=await api(`/api/pairs?q=${encodeURIComponent($('#pq').value)}&page=${page}`);
+  const j=await api(`/api/pairs?q=${encodeURIComponent($('#pq').value)}&page=${page}${scopeAll?'&scope=all':''}`);
   total=j.total;page=j.page;$('#pairN').textContent=j.total;
+  $('#pScope').innerHTML=scopeAll
+    ? `<span style="color:var(--t4)">当前显示全部映射（含产物已删的）</span>
+       <button class="text" id="scopeBtn" style="margin-left:6px">只看在档</button>`
+    : (j.hidden>0
+      ? `<span style="color:var(--warn)">另有 ${j.hidden} 条的产物已不在工作目录</span>
+         <button class="text" id="scopeBtn" style="margin-left:6px">显示全部</button>`
+      : '');
+  const sb=$('#scopeBtn');
+  if(sb)sb.onclick=()=>{scopeAll=!scopeAll;page=1;loadPairs()};
   $('#pairs').innerHTML=j.rows.map(r=>`<tr><td><span class="chip gold">${esc(r.rule)}</span></td>
       <td class="nm"><span class="wrap"><span class="txt" title="${esc(r.orig)}">${esc(r.orig)}</span></span></td>
       <td class="nm"><span class="wrap"><span class="txt" style="color:var(--gold-2)" title="${esc(r.fake)}">${esc(r.fake)}</span></span></td>
       <td><button class="quiet" style="width:28px;padding:0" data-cp="${esc(r.orig)}" title="复制原值" aria-label="复制原值">${ICON.copy}</button></td></tr>`).join('')
     || `<tr><td colspan="4"><div class="blank">${ICON.blank}还没有映射<br>先跑一次脱敏</div></td></tr>`;
-  $$('#pairs [data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);b.innerHTML='已复制';b.style.width='auto'}catch(e){b.innerHTML='失败'}});
+  $$('#pairs [data-cp]').forEach(b=>b.onclick=async()=>{const how=await copyText(b.dataset.cp);
+    b.innerHTML=how==='manual'?'手动':'已复制';b.style.width='auto'});
   const pages=Math.max(1,Math.ceil(total/j.pageSize));
   $('#pInfo').textContent=`共 ${total} 条 · ${page}/${pages} 页`;
 }
@@ -466,7 +503,8 @@ async function run(){
   const files=$$('.fchk:checked').map(c=>c.value);
   if(!files.length){$('#runInfo').textContent='先勾选文件';return}
   const btn=$('#runBtn');btn.disabled=true;btn.querySelector('svg').classList.add('spin');
-  $('#results').innerHTML='';$('#bar').style.width='0%';$('#progTxt').textContent='0 / '+files.length;
+  $('#results').innerHTML='';$('#resBar').classList.add('hide');$('#upErr').textContent='';
+  $('#bar').style.width='0%';$('#progTxt').textContent='0 / '+files.length;
   let done=0;const all=[];
   for(const f of files){
     try{const j=await api('/api/run',Object.assign({method:'POST'},jbody({mode,files:[f],jitter:$('#jitter').checked})));all.push(j.results[0])}
@@ -479,6 +517,7 @@ async function run(){
   renderWarns();
   $('#results').innerHTML=all.map((r,i)=>r.ok
     ? `<article class="res" style="animation:rise .32s var(--ease) both;animation-delay:${i*36}ms">
+        <span class="rsel"><input type="checkbox" class="rchk" value="${esc(r.out)}" checked aria-label="选中 ${esc(r.out)}"></span>
         <span class="dot"></span><div class="lines">
           <div class="f">${esc(r.file)}<em>→</em>${esc(r.out)}</div>
           <div class="hits">替换 <b>${r.hits}</b> 处</div>
@@ -487,9 +526,11 @@ async function run(){
             <button class="quiet" data-copy="${esc(r.out)}">${ICON.copy}复制路径</button></div>
         </div></article>`
     : `<article class="res bad" style="animation:rise .32s var(--ease) both;animation-delay:${i*36}ms">
-        <span class="dot"></span><div class="lines">
+        <span class="rsel"></span><span class="dot"></span><div class="lines">
           <div class="f">${esc(r.file)}</div><div class="why">${esc(r.error||'未知错误')}</div></div></article>`).join('');
-  $$('#results [data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='已复制'}catch(e){}});
+  $$('#results [data-copy]').forEach(b=>b.onclick=async e=>{e.stopPropagation();
+    const how=await copyText(absPath(b.dataset.copy));b.textContent=how==='manual'?'手动复制':'已复制'});
+  bindResults();
   btn.disabled=false;btn.querySelector('svg').classList.remove('spin');
   await loadPairs();await refreshState();
 }
@@ -511,6 +552,49 @@ function setMode(m){
 function setView(v){$$('[data-view]').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
   ['pairs','lookup','warn'].forEach(k=>$('#view-'+k).classList.toggle('hide',k!==v));}
 
+/** 复制文本：优先剪贴板 API；被浏览器拦（无手势/无权限）就弹一个可选中的文本框兜底。 */
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return 'api'; }catch(e){}
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.setAttribute('readonly','readonly');
+  ta.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;'
+    +'width:min(600px,84vw);height:170px;padding:10px 12px;border-radius:10px;resize:none;'
+    +'background:#1c1510;color:#fff;border:1px solid rgba(255,255,255,.18);font:12px ui-monospace,Consolas,monospace';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  let ok=false;try{ ok=document.execCommand('copy'); }catch(e){}
+  if(ok){ ta.remove(); return 'exec'; }
+  $('#runInfo').textContent='已弹出文本框：按 Ctrl+C 复制，点一下文本框即关闭';
+  ta.onclick=()=>ta.remove();
+  return 'manual';
+}
+
+function bindResults(){
+  const cards=$$('#results .res');
+  $('#resBar').classList.toggle('hide',cards.length===0);
+  cards.forEach(card=>{
+    const cb=card.querySelector('.rchk');
+    if(!cb)return;
+    card.classList.add('pickable');
+    card.onclick=e=>{
+      if(e.target===cb||e.target.closest('a,button,label'))return;
+      cb.checked=!cb.checked;
+      cb.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+  });
+  $$('.rchk').forEach(c=>c.onchange=()=>{c.closest('.res').classList.toggle('pick',c.checked);selRes()});
+  selRes();
+}
+function selRes(){
+  const all=$$('.rchk'), sel=all.filter(c=>c.checked);
+  $('#resSel').textContent=`已选 ${sel.length} / ${all.length} 件`;
+  $('#allRes').checked=all.length>0&&sel.length===all.length;
+}
+const absPath=rel=>{
+  const root=$('#rootPath').textContent.replace(/[\\/]+$/,'');
+  const sep=root.includes('\\')?'\\':'/';
+  return root+sep+rel.replace(/\//g,sep);
+};
+
 /* ---------- 事件 ---------- */
 $$('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('[data-tab]').forEach(x=>x.classList.toggle('on',x===b));
   $('#goBtn').querySelector('span').textContent=tab==='new'?'新建并进入':'解锁进入'});
@@ -527,6 +611,26 @@ $('#lockBtn').onclick=async()=>{try{await post('/api/lock',{})}catch(e){}await r
 $$('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 $$('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('#runBtn').onclick=run;
+$('#allRes').onchange=()=>{const on=$('#allRes').checked;$$('.rchk').forEach(c=>{c.checked=on;c.closest('.res').classList.toggle('pick',on)});selRes()};
+$('#zipBtn').onclick=async()=>{
+  const paths=$$('.rchk').filter(c=>c.checked).map(c=>c.value);
+  if(!paths.length){$('#upErr').textContent='先选中要下载的产物';return}
+  $('#upErr').textContent='';
+  try{
+    const r=await fetch('/api/download-zip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paths})});
+    if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||('HTTP '+r.status))}
+    const blob=await r.blob();
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='脱敏产物.zip';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    $('#runInfo').textContent='已打包 '+paths.length+' 件';
+  }catch(e){$('#upErr').textContent=e.message}
+};
+$('#cpAllBtn').onclick=async()=>{
+  const paths=$$('.rchk').filter(c=>c.checked).map(c=>absPath(c.value));
+  if(!paths.length){$('#upErr').textContent='先选中要复制的产物';return}
+  const how=await copyText(paths.join(String.fromCharCode(10)));
+  if(how!=='manual')$('#runInfo').textContent='已复制 '+paths.length+' 条路径';
+};
 $('#refreshBtn').onclick=loadList;
 $('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');dir=i<0?'':dir.slice(0,i);loadList()};
 $('#uplandBtn').onclick=()=>{dir=UPLOAD_DIR;loadList()};
@@ -536,7 +640,7 @@ $('#clearQ').onclick=()=>{$('#pq').value='';page=1;loadPairs()};
 $('#pq').onkeydown=e=>{if(e.key==='Enter'){page=1;loadPairs()}};
 $('#pPrev').onclick=()=>{if(page>1){page--;loadPairs()}};
 $('#pNext').onclick=()=>{if(page*200<total){page++;loadPairs()}};
-$('#exportBtn').onclick=()=>{if(confirm('对照表含原值，导出后严禁发给 AI 或外发。确认导出？'))location.href='/api/export/pairs'};
+$('#exportBtn').onclick=()=>{if(confirm('对照表含原值，导出后严禁发给 AI 或外发。确认导出？'))location.href='/api/export/pairs'+(scopeAll?'?scope=all':'')};
 $('#lookupBtn').onclick=()=>lookup(false);$('#lookupRevBtn').onclick=()=>lookup(true);
 async function lookup(rev){
   const v=$('#lv').value.trim();$('#lkOut').innerHTML='';

@@ -89,7 +89,8 @@ public final class Api {
             case "/api/ls" -> ls(query.getOrDefault("dir", ""));
             case "/api/run" -> run(body);
             case "/api/pairs" -> pairs(query);
-            case "/api/export/pairs" -> exportPairs();
+            case "/api/export/pairs" -> exportPairs(query);
+            case "/api/download-zip" -> zip(body);
             case "/api/lookup" -> lookup(body);
             case "/api/upload" -> upload(body, contentType);
             case "/file" -> file(query.get("path"));
@@ -199,7 +200,9 @@ public final class Api {
                 Path out = Paths0.sib(in, mode.equals("mask") ? MASK_OUT_SUFFIX : UNMASK_OUT_SUFFIX);
                 Summary sum = new Summary();
                 Ctx ctx = new Ctx(book, rules, mode.equals("unmask"), sum, jitter);
+                book.beginFile(mode.equals("mask") ? ws.relativize(out) : null);
                 Rw.RwResult res = RwFactory.byPath(in).process(in, out, ctx);
+                book.beginFile(null);
                 sum.fileDone(in.getFileName().toString(), res.hits(), res.warnings());
                 book.touchFile(in.getFileName().toString());
                 if (res.hits() > 0) {
@@ -224,14 +227,34 @@ public final class Api {
 
     private Resp pairs(Map<String, String> query) {
         requireUnlock();
-        return Resp.json(200, ok(pairsJson(query.get("q"), parseInt(query.get("page"), 1))), om);
+        return Resp.json(200, ok(pairsJson(query.get("q"), parseInt(query.get("page"), 1),
+                "all".equals(query.get("scope")))), om);
     }
 
-    private Map<String, Object> pairsJson(String q, int page) {
+    /**
+     * 对照表跟随产物：码本里记了 byFile（哪个产物用了哪些映射）时，只显示产物仍在工作目录的映射；
+     * 老码本没有归属信息（byFile 空）则全部显示，免得历史数据凭空消失。
+     */
+    private Map<String, Object> pairsJson(String q, int page, boolean showAll) {
         String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        Map<String, java.util.List<String>> byFile = session.book().json().byFile;
+        java.util.Set<String> visible = null;
+        if (!showAll && !byFile.isEmpty()) {
+            visible = new java.util.HashSet<>();
+            for (Map.Entry<String, java.util.List<String>> e : byFile.entrySet()) {
+                if (productExists(e.getKey())) {
+                    visible.addAll(e.getValue());
+                }
+            }
+        }
         List<Map<String, Object>> all = new ArrayList<>();
+        int hidden = 0;
         for (Map.Entry<String, Map<String, String>> byRule : session.book().maps().entrySet()) {
             for (Map.Entry<String, String> e : byRule.getValue().entrySet()) {
+                if (visible != null && !visible.contains(byRule.getKey() + "\u0001" + e.getKey())) {
+                    hidden++;
+                    continue;
+                }
                 if (!needle.isEmpty()
                         && !e.getKey().toLowerCase(Locale.ROOT).contains(needle)
                         && !e.getValue().toLowerCase(Locale.ROOT).contains(needle)) {
@@ -244,17 +267,47 @@ public final class Api {
         int to = Math.min(from + PAGE, all.size());
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("total", all.size());
+        m.put("hidden", hidden);
+        m.put("scoped", visible != null);
         m.put("page", page);
         m.put("pageSize", PAGE);
         m.put("rows", all.subList(from, to));
         return m;
     }
 
-    private Resp exportPairs() {
+    /** byFile 里存的可能是工作目录内相对路径（网页脱敏），也可能是绝对路径（CLI 脱敏）。 */
+    private boolean productExists(String stored) {
+        if (stored == null || stored.isBlank()) {
+            return false;
+        }
+        try {
+            Path p = stored.startsWith("/") || stored.matches("^[A-Za-z]:[\\\\/].*")
+                    ? Path.of(stored) : ws.resolve(stored);
+            return Files.isRegularFile(p);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private Resp exportPairs(Map<String, String> query) {
         requireUnlock();
+        boolean showAll = "all".equals(query.get("scope"));
         StringBuilder sb = new StringBuilder("﻿类别,原值,假值\n");
+        Map<String, java.util.List<String>> byFile = session.book().json().byFile;
+        java.util.Set<String> visible = null;
+        if (!showAll && !byFile.isEmpty()) {
+            visible = new java.util.HashSet<>();
+            for (Map.Entry<String, java.util.List<String>> e : byFile.entrySet()) {
+                if (productExists(e.getKey())) {
+                    visible.addAll(e.getValue());
+                }
+            }
+        }
         for (Map.Entry<String, Map<String, String>> byRule : session.book().maps().entrySet()) {
             for (Map.Entry<String, String> e : byRule.getValue().entrySet()) {
+                if (visible != null && !visible.contains(byRule.getKey() + "\u0001" + e.getKey())) {
+                    continue;
+                }
                 sb.append(csv(byRule.getKey())).append(',').append(csv(e.getKey()))
                         .append(',').append(csv(e.getValue())).append('\n');
             }
@@ -292,6 +345,45 @@ public final class Api {
         String rel = ws.relativize(landed);
         return Resp.json(200, ok(Map.of("rel", rel, "name", landed.getFileName().toString(),
                 "size", landed.toFile().length())), om);
+    }
+
+    /** 打包下载：把选中的产物打成 zip（浏览器一次只弹一个保存框，选中多个也不烦）。 */
+    private Resp zip(byte[] body) {
+        requireUnlock();
+        JsonNode j = parse(body);
+        JsonNode paths = j.path("paths");
+        if (!paths.isArray() || paths.isEmpty()) {
+            throw new MaskException("没选中要下载的产物");
+        }
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        int packed = 0;
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(bos, StandardCharsets.UTF_8)) {
+            java.util.Set<String> used = new java.util.HashSet<>();
+            for (JsonNode n : paths) {
+                Path p = ws.resolve(n.asText());
+                if (!Files.isRegularFile(p)) {
+                    continue;
+                }
+                String name = p.getFileName().toString();
+                String unique = name;
+                int k = 1;
+                while (!used.add(unique)) {
+                    int dot = name.lastIndexOf('.');
+                    unique = dot > 0 ? name.substring(0, dot) + "-" + k + name.substring(dot) : name + "-" + k;
+                    k++;
+                }
+                zos.putNextEntry(new java.util.zip.ZipEntry(unique));
+                zos.write(Files.readAllBytes(p));
+                zos.closeEntry();
+                packed++;
+            }
+        } catch (IOException e) {
+            throw new MaskException("打包失败: " + e.getMessage(), e);
+        }
+        if (packed == 0) {
+            throw new MaskException("选中的产物都不在工作目录里了");
+        }
+        return new Resp(200, bos.toByteArray(), "application/zip", "脱敏产物.zip");
     }
 
     private Resp file(String rel) {

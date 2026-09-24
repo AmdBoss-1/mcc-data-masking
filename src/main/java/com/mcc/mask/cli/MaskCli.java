@@ -98,7 +98,9 @@ public final class MaskCli {
             Summary sum = new Summary();
             Ctx ctx = new Ctx(book, rules(), reverse(), sum, jitter());
             Rw rw = RwFactory.byPath(in);
+            book.beginFile(reverse() ? null : target.toAbsolutePath().toString());
             Rw.RwResult r = rw.process(in, target, ctx);
+            book.beginFile(null);
             sum.fileDone(in.getFileName().toString(), r.hits(), r.warnings());
             book.touchFile(in.getFileName().toString());
             if (!exists) {

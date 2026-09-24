@@ -29,7 +29,7 @@ class ApiHttpTest {
     private String base;
     private final HttpClient http = HttpClient.newHttpClient();
 
-    private record Http(int status, String body, String disposition) {
+    private record Http(int status, String body, String disposition, byte[] raw) {
         boolean has(String s) {
             return body.contains(s);
         }
@@ -84,7 +84,7 @@ class ApiHttpTest {
     private Http send(HttpRequest.Builder rb) throws Exception {
         HttpResponse<byte[]> r = http.send(rb.build(), HttpResponse.BodyHandlers.ofByteArray());
         String cd = r.headers().firstValue("Content-Disposition").orElse("");
-        return new Http(r.statusCode(), new String(r.body(), StandardCharsets.UTF_8), cd);
+        return new Http(r.statusCode(), new String(r.body(), StandardCharsets.UTF_8), cd, r.body());
     }
 
     @Test
@@ -137,6 +137,64 @@ class ApiHttpTest {
         assertEquals(200, csv.status);
         assertTrue(csv.disposition.contains("filename*=UTF-8''%E5%AF%B9%E7%85%A7%E8%A1%A8.csv"), csv.disposition);
         assertTrue(csv.has("昆山精密五金厂"), csv.body);
+    }
+
+    @Test
+    void 对照表跟随产物_产物删了就不显示_打包下载可用() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令A\"}");
+        Http run = post("/api/run", "{\"mode\":\"mask\",\"files\":[\"台账.csv\",\"报告.md\"]}");
+        assertEquals(200, run.status, run.body);
+
+        Http pairs1 = get("/api/pairs");
+        assertTrue(pairs1.has("\"total\":6"), "台账 2 行×3 列 = 6 条: " + pairs1.body);
+        assertTrue(pairs1.has("\"hidden\":0"), pairs1.body);
+
+        // 打包下载（两个产物一个 zip）
+        Http zip = send(HttpRequest.newBuilder(URI.create(base + "/api/download-zip"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"paths\":[\"台账.masked.csv\",\"报告.masked.md\"]}", StandardCharsets.UTF_8)));
+        assertEquals(200, zip.status, zip.body);
+        byte[] raw = rawOf(zip);
+        assertEquals('P', raw[0]);
+        assertEquals('K', raw[1]);
+        String entries = zipEntries(raw);
+        assertTrue(entries.contains("台账.masked.csv") && entries.contains("报告.masked.md"), entries);
+
+        // 删掉台账产物 → 它的 3 条映射不再显示，其余还在
+        Files.delete(root.resolve("台账.masked.csv"));
+        Http pairs2 = get("/api/pairs");
+        assertTrue(pairs2.has("\"total\":1"), "只剩报告复用的手机号那条: " + pairs2.body);
+        assertTrue(pairs2.has("\"hidden\":5"), pairs2.body);
+        assertTrue(pairs2.has("\"scoped\":true"), pairs2.body);
+
+        // 显示全部 → 又都能看见
+        assertTrue(get("/api/pairs?scope=all").has("\"total\":6"), "scope=all 应给出全部映射");
+
+        // 锁定再解锁（码本落盘往返后）作用域仍然生效
+        post("/api/lock", "{}");
+        post("/api/book/unlock", "{\"pass\":\"口令A\"}");
+        assertTrue(get("/api/pairs").has("\"total\":1"), "重新解锁后 byFile 应还在");
+
+        // 导出也跟着作用域走
+        Http csv = get("/api/export/pairs");
+        assertTrue(csv.has("13800001111"), csv.body);
+        assertTrue(!csv.has("苏A12345"), "已删产物的映射不该出现在导出里: " + csv.body);
+    }
+
+    private static byte[] rawOf(Http h) {
+        return h.raw();
+    }
+
+    private static String zipEntries(byte[] zip) throws Exception {
+        try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(zip))) {
+            StringBuilder sb = new StringBuilder();
+            java.util.zip.ZipEntry e;
+            while ((e = in.getNextEntry()) != null) {
+                sb.append(e.getName()).append('\n');
+            }
+            return sb.toString();
+        }
     }
 
     @Test
