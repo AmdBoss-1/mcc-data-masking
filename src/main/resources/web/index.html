@@ -168,10 +168,12 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .res.pick{border-color:rgba(240,185,90,.34);background:rgba(240,185,90,.07)}
 .rsel{display:flex;align-items:flex-start;padding-top:5px}
 .rsel input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
-.resbar{display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border-radius:9px;
+.resbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;margin-top:12px;padding:8px 10px;border-radius:9px;
   background:var(--panel-2);border:1px solid var(--line-2);font-size:12.5px;color:var(--t3)}
-.resbar .meta{color:var(--t2)}
-.resbar .grow{flex:1}
+.resbar .meta{color:var(--t2);white-space:nowrap}
+.resbar .check{white-space:nowrap}
+.resbar button{flex:none}
+.resbar .grow{flex:1;min-width:0}
 .res.bad{background:rgba(255,92,120,.07);border-color:rgba(255,92,120,.24)}
 .res .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);margin-top:7px}
 .res.bad .dot{background:var(--red)}
