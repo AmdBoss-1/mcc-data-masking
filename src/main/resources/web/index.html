@@ -371,6 +371,7 @@ const MODE={
   unmask:{label:'开始还原',note:'<b>还原</b>：把 AI 回来的文件换回真值，产出 <code>.restored</code> 副本。'}
 };
 let unlocked=false, dir='', entries=[], page=1, total=0, mode='mask', tab='unlock', warns=[];
+const UPLOAD_DIR='.mcc-upload';
 
 async function api(p,o){
   const r=await fetch(p,Object.assign({headers:{}},o));
@@ -403,11 +404,20 @@ async function refreshState(){
 
 /* ---------- 文件 ---------- */
 async function loadList(){
-  entries=(await api('/api/ls?dir='+encodeURIComponent(dir))).entries;
+  const upBtn=$('#upBtn');upBtn.disabled=!dir;
+  try{
+    entries=(await api('/api/ls?dir='+encodeURIComponent(dir))).entries;
+  }catch(e){
+    entries=[];$('#list').innerHTML=`<tr><td colspan="4"><div class="blank">${ICON.blank}打不开这个目录<br>${esc(e.message)}</div></td></tr>`;
+    return;
+  }
   const f=$('#filter').value.trim().toLowerCase(), onlyS=$('#onlySupported').checked;
   const rows=entries.filter(e=>!f||e.name.toLowerCase().includes(f)).filter(e=>e.dir||!onlyS||e.supported);
   const segs=dir?dir.split('/'):[];
-  $('#crumb').innerHTML=`<button data-go="">根目录</button>`+segs.map((s,i)=>
+  $('#crumb').innerHTML=(segs.length
+      ? `<button data-go="">根目录</button>`
+      : `<button class="here" disabled>根目录</button>`)
+    +segs.map((s,i)=>
     `<span class="sl">/</span><button data-go="${esc(segs.slice(0,i+1).join('/'))}" class="${i===segs.length-1?'here':''}">${esc(s)}</button>`).join('');
   $$('#crumb button').forEach(b=>b.onclick=()=>{dir=b.dataset.go;loadList()});
   $('#list').innerHTML=rows.map(e=>e.dir
@@ -415,7 +425,10 @@ async function loadList(){
     : `<tr class="${e.supported?'':'no'}"><td><input type="checkbox" class="fchk" value="${esc(e.rel)}" ${e.supported?'':'disabled'} aria-label="${esc(e.name)}"></td>
         <td class="nm"><span class="wrap"><span class="ig">${iconFor(e.name)}</span><span class="txt" title="${esc(e.name)}">${esc(e.name)}</span>${e.supported?'':'<span class="chip">不支持</span>'}</span></td>
         <td class="num">${sz(e.size)}</td><td class="num">${esc(e.mtime.slice(5,16))}</td></tr>`).join('')
-    || `<tr><td colspan="4"><div class="blank">${ICON.blank}这里没有可处理的文件<br>换个目录，或把 AI 产物拖到右侧上传区</div></td></tr>`;
+    || `<tr><td colspan="4"><div class="blank">${ICON.blank}${dir===UPLOAD_DIR
+        ? '上传区还是空的<br>把 AI 产物拖到右边「执行」栏的上传口<br><button class="quiet" id="upPick" style="margin-top:10px">选择文件上传</button>'
+        : '这里没有可处理的文件<br>换个目录，或把 AI 产物拖到右侧上传区'}</div></td></tr>`;
+  const pick=$('#upPick');if(pick)pick.onclick=()=>$('#file').click();
   $$('#list [data-cd]').forEach(a=>a.onclick=()=>{dir=a.dataset.cd;loadList()});
   $$('.fchk').forEach(c=>c.onchange=()=>{c.closest('tr').classList.toggle('pick',c.checked);selInfo()});
   selInfo();
@@ -487,7 +500,7 @@ async function upload(files){
     try{const j=await api('/api/upload',{method:'POST',body:fd});$('#runInfo').textContent='已收 '+j.name}
     catch(e){$('#upErr').textContent=e.message}
   }
-  dir='.mcc-upload';await loadList();
+  dir=UPLOAD_DIR;await loadList();
   $$('.fchk').forEach(c=>{c.checked=true;c.closest('tr').classList.add('pick')});selInfo();
 }
 function setMode(m){
@@ -516,7 +529,7 @@ $$('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('#runBtn').onclick=run;
 $('#refreshBtn').onclick=loadList;
 $('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');dir=i<0?'':dir.slice(0,i);loadList()};
-$('#uplandBtn').onclick=()=>{dir='.mcc-upload';loadList()};
+$('#uplandBtn').onclick=()=>{dir=UPLOAD_DIR;loadList()};
 $('#onlySupported').onchange=loadList;$('#filter').oninput=loadList;
 $('#pSearch').onclick=()=>{page=1;loadPairs()};
 $('#clearQ').onclick=()=>{$('#pq').value='';page=1;loadPairs()};

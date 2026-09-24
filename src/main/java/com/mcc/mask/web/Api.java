@@ -161,12 +161,16 @@ public final class Api {
 
     private Resp ls(String relDir) {
         requireUnlock();
+        String dir = relDir == null ? "" : relDir;
+        if (Workspace.UPLOAD_DIR_NAME.equals(dir)) {
+            ws.uploadDir();   // 还没传过东西时也要能进去看（空目录）
+        }
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Workspace.Entry e : ws.list(relDir)) {
+        for (Workspace.Entry e : ws.list(dir)) {
             rows.add(Map.of("name", e.name(), "rel", e.rel(), "dir", e.dir(),
                     "size", e.size(), "mtime", e.mtime(), "supported", e.supported()));
         }
-        return Resp.json(200, ok(Map.of("dir", relDir, "entries", rows)), om);
+        return Resp.json(200, ok(Map.of("dir", dir, "entries", rows)), om);
     }
 
     private synchronized Resp run(byte[] body) {
