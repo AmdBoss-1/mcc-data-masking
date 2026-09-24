@@ -107,7 +107,7 @@ input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,185,90,.14)}
   max-width:1500px;margin:0 auto;padding:20px 22px 40px;align-items:stretch}
 .shell.locked{opacity:.36;filter:saturate(.4);pointer-events:none}
 .pane{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r);min-width:0;
-  display:flex;flex-direction:column;min-height:min(66vh,560px)}
+  display:flex;flex-direction:column;min-height:min(72vh,640px)}
 .pane > header{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line-2)}
 .pane > header h2{margin:0;font-size:13.5px;font-weight:650;letter-spacing:.2px}
 .pane > header .meta{font-size:12px;color:var(--t3);margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -122,7 +122,7 @@ input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,185,90,.14)}
 .path .sl{opacity:.35;padding:0 1px}
 .tools{display:flex;align-items:center;gap:8px;padding:11px 15px 12px;border-bottom:1px solid var(--line-2)}
 .tools .grow{flex:1;min-width:120px}
-.tablewrap{flex:1;min-height:260px;max-height:min(58vh,560px);overflow:auto;overscroll-behavior:contain}
+.tablewrap{flex:1;min-height:260px;overflow:auto;overscroll-behavior:contain}
 table.grid{width:100%;border-collapse:separate;border-spacing:0}
 table.grid th{position:sticky;top:0;z-index:1;text-align:left;font-size:11.5px;font-weight:500;color:var(--t4);
   padding:9px 10px;background:rgba(23,17,10,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line-2)}
@@ -160,7 +160,7 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .track{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
 .track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-2));
   transition:width .3s var(--ease)}
-.results{margin-top:13px;display:grid;gap:8px;flex:1;min-height:0;max-height:min(40vh,380px);overflow:auto;overscroll-behavior:contain;align-content:start}
+.results{margin-top:13px;display:grid;gap:8px;flex:1;min-height:210px;overflow:auto;overscroll-behavior:contain;align-content:start}
 .res{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;padding:11px 12px;border-radius:11px;
   background:var(--panel-2);border:1px solid var(--line-2)}
 .res.pickable{cursor:pointer}
@@ -185,11 +185,12 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .res .why{font-size:12px;color:#ff9fb0;margin-top:3px;line-height:1.6}
 .res .note{font-size:11.5px;color:var(--warn);margin-top:4px;line-height:1.6}
 .res .ops{display:flex;gap:6px;margin-top:8px}
-.drop{margin-top:13px;padding:13px 12px;border-radius:11px;text-align:center;color:var(--t3);font-size:12.5px;
+.drop{margin-top:13px;padding:10px 12px;border-radius:11px;text-align:center;color:var(--t3);font-size:12.5px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
   border:1px dashed rgba(255,255,255,.18);background:var(--panel-2);cursor:pointer;transition:.18s var(--ease)}
 .drop:hover{border-color:rgba(240,185,90,.4);color:var(--t2)}
 .drop.hot{border-color:var(--gold);border-style:solid;color:var(--gold-2);background:var(--gold-soft)}
-.drop svg{width:16px;height:16px;margin:0 auto 4px;stroke:currentColor}
+.drop svg{width:16px;height:16px;stroke:currentColor;flex:none}
 .how{list-style:none;margin:auto 0 0;padding:14px 0 0;display:grid;gap:9px;font-size:12.5px;color:var(--t3)}
 .how li{display:flex;gap:9px;align-items:flex-start}
 .how .k{color:var(--gold-2);font-family:ui-monospace,Consolas,monospace;font-size:11.5px;padding-top:1px}
@@ -203,7 +204,7 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .pane-audit #view-pairs{display:flex;flex-direction:column;flex:1;min-height:0}
 .pane-audit .search{display:flex;gap:8px;padding:12px 15px 10px}
 .pane-audit .search input{flex:1}
-.auditwrap{flex:1;min-height:200px;max-height:min(54vh,520px);overflow:auto;overscroll-behavior:contain;padding:0 15px}
+.auditwrap{flex:1;min-height:200px;overflow:auto;overscroll-behavior:contain;padding:0 15px}
 .lookup{padding:14px 15px}
 .lookup .ask{display:flex;gap:8px}
 .lookup .ask input{flex:1}
@@ -307,14 +308,9 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
         <button class="quiet" id="cpAllBtn"><svg class="i s" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>复制路径</button>
       </div>
       <div class="results" id="results"></div>
-      <ul class="how" id="how">
-        <li><span class="k">1</span><span>左边勾文件（可多选），点「开始脱敏」</span></li>
-        <li><span class="k">2</span><span>发出去的只有 <code>.masked</code> 副本</span></li>
-        <li><span class="k">3</span><span>AI 产物拖到下面，切「还原」再点一次</span></li>
-      </ul>
-      <div class="drop" id="drop">
+      <div class="drop" id="drop" title="也可以直接把文件拖到这里的整个执行栏">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V5m0 0L8 9m4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
-        拖入 AI 产物（或点击选择）· 单件 ≤512MB
+        <span>拖入 AI 产物（或点击选择）· 单件 ≤512MB</span>
       </div>
       <input type="file" id="file" class="hide" multiple>
       <div id="upErr" class="err" style="color:var(--red);font-size:12.5px;min-height:18px;margin-top:8px"></div>
@@ -505,7 +501,7 @@ async function run(){
   const files=$$('.fchk:checked').map(c=>c.value);
   if(!files.length){$('#runInfo').textContent='先勾选文件';return}
   const btn=$('#runBtn');btn.disabled=true;btn.querySelector('svg').classList.add('spin');
-  $('#results').innerHTML='';$('#resBar').classList.add('hide');$('#upErr').textContent='';
+  $('#results').innerHTML=HOW_HTML;$('#resBar').classList.add('hide');$('#upErr').textContent='';
   $('#bar').style.width='0%';$('#progTxt').textContent='0 / '+files.length;
   let done=0;const all=[];
   for(const f of files){
@@ -569,6 +565,13 @@ async function copyText(text){
   ta.onclick=()=>ta.remove();
   return 'manual';
 }
+
+const HOW_HTML=`<div class="blank" style="text-align:left;padding:22px 18px">
+  <ul class="how" style="margin:0">
+    <li><span class="k">1</span><span>左边勾文件（可多选，点行就行），点「开始脱敏」</span></li>
+    <li><span class="k">2</span><span>发出去的只有 <code>.masked</code> 副本，原件不动</span></li>
+    <li><span class="k">3</span><span>AI 产物拖进下面那行，切「还原」再点一次</span></li>
+  </ul></div>`;
 
 function bindResults(){
   const cards=$$('#results .res');
@@ -667,7 +670,9 @@ addEventListener('pagehide',()=>{navigator.sendBeacon('/api/lock',new Blob(['{}'
 const st=document.createElement('style');
 st.textContent='@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}';
 document.head.appendChild(st);
-setMode('mask');setView('pairs');renderWarns();refreshState();
+setMode('mask');setView('pairs');renderWarns();
+$('#results').innerHTML=HOW_HTML;
+refreshState();
 </script>
 </body>
 </html>
