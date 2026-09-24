@@ -36,8 +36,17 @@ final class SheetRw {
                     continue;
                 }
                 for (Cell cell : row) {
+                    if (cell.getCellType() == CellType.NUMERIC && ctx.jitter() && !ctx.reverse()) {
+                        double d = cell.getNumericCellValue();
+                        String s0 = new java.math.BigDecimal(Double.toString(d)).toPlainString();
+                        String j = com.mcc.mask.rules.Transformers.jitter(3.0)
+                                .fake(s0, (sh.getSheetName() + r + cell.getColumnIndex()).hashCode());
+                        cell.setCellValue(Double.parseDouble(j));
+                        hits++;
+                        continue;
+                    }
                     if (cell.getCellType() != CellType.STRING) {
-                        continue; // 数值/公式/日期不动（--jitter 在 CLI 层另接）
+                        continue; // 数值(未开 jitter)/公式/日期不动
                     }
                     String v = cell.getStringCellValue();
                     if (v.isEmpty()) {
