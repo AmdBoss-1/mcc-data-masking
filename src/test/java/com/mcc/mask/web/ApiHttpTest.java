@@ -220,6 +220,21 @@ class ApiHttpTest {
     }
 
     @Test
+    void 链式脏映射会被标记出来() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令A\"}");
+        post("/api/run", "{\"mode\":\"mask\",\"files\":[\"台账.csv\"]}");
+        // 造一条链：把台账脱敏后的假车牌放进一个新文件，再脱一次
+        String fakePlate = get("/api/pairs?q=苏").body().replaceAll("(?s).*\"fake\":\"([^\"]+)\".*", "$1");
+        Files.writeString(root.resolve("z.csv"), "车牌\n" + fakePlate + "\n");
+        Http run2 = post("/api/run", "{\"mode\":\"mask\",\"files\":[\"z.csv\"]}");
+        assertEquals(200, run2.status, run2.body);
+
+        Http pairs = get("/api/pairs");
+        assertTrue(pairs.has("\"chained\":1"), "应标出 1 条链式: " + pairs.body);
+        assertTrue(pairs.has(fakePlate), pairs.body);
+    }
+
+    @Test
     void 错口令与路径越界与锁定() throws Exception {
         post("/api/book/new", "{\"pass\":\"口令A\"}");
         assertEquals(200, post("/api/lock", "{}").status);

@@ -482,17 +482,20 @@ async function loadPairs(){
   const j=await api(`/api/pairs?q=${encodeURIComponent($('#pq').value)}&page=${page}${scopeAll?'&scope=all':''}`);
   total=j.total;page=j.page;$('#pairN').textContent=j.total;
   const note=$('#pScope');
-  note.classList.toggle('hide',!(scopeAll||j.hidden>0));
-  note.innerHTML=scopeAll
+  const chainTip=j.chained>0
+    ? `<span style="color:var(--warn)">其中 ${j.chained} 条是链式脏映射（脱敏产物又被脱了一遍）</span>
+       <span style="color:var(--t4)">删掉对应的 <b>.masked.masked.*</b> 文件 → 点「刷新」即可清掉</span>` : '';
+  note.classList.toggle('hide',!(scopeAll||j.hidden>0||j.chained>0));
+  note.innerHTML=(scopeAll
     ? `<span style="color:var(--t4)">当前显示全部映射（含产物已删的）</span>
        <button class="text" id="scopeBtn" style="margin-left:6px">只看在档</button>`
     : (j.hidden>0
       ? `<span style="color:var(--warn)">另有 ${j.hidden} 条的产物已不在工作目录</span>
          <button class="text" id="scopeBtn" style="margin-left:6px">显示全部</button>`
-      : '');
+      : '')) + (chainTip?`<span style="flex-basis:100%"></span>`+chainTip:'');
   const sb=$('#scopeBtn');
   if(sb)sb.onclick=()=>{scopeAll=!scopeAll;page=1;loadPairs()};
-  $('#pairs').innerHTML=j.rows.map(r=>`<tr><td><span class="chip gold">${esc(r.rule)}</span></td>
+  $('#pairs').innerHTML=j.rows.map(r=>`<tr><td><span class="chip gold">${esc(r.rule)}</span>${r.chained?'<span class="chip bad" title="脱敏产物又被脱了一遍留下的脏映射">链式</span>':''}</td>
       <td class="nm"><span class="wrap"><span class="txt" title="${esc(r.orig)}">${esc(r.orig)}</span></span></td>
       <td class="nm"><span class="wrap"><span class="txt" style="color:var(--gold-2)" title="${esc(r.fake)}">${esc(r.fake)}</span></span></td>
       <td><button class="quiet" style="width:28px;padding:0" data-cp="${esc(r.orig)}" title="复制原值" aria-label="复制原值">${ICON.copy}</button></td></tr>`).join('')
@@ -650,7 +653,9 @@ $('#cpAllBtn').onclick=async()=>{
   const how=await copyText(paths.join(String.fromCharCode(10)));
   if(how!=='manual')$('#runInfo').textContent='已复制 '+paths.length+' 条路径';
 };
-$('#refreshBtn').onclick=loadList;
+$('#refreshBtn').onclick=async()=>{
+  try{await loadList();await loadPairs()}catch(e){await refreshState()}
+};
 $('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');dir=i<0?'':dir.slice(0,i);loadList()};
 $('#uplandBtn').onclick=()=>{dir=UPLOAD_DIR;loadList()};
 $('#onlySupported').onchange=loadList;$('#filter').oninput=loadList;
@@ -692,6 +697,10 @@ drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot')};
 drop.ondragleave=()=>drop.classList.remove('hot');
 drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot');upload([...e.dataTransfer.files])};
 $('#file').onchange=e=>upload([...e.target.files]);
+addEventListener('focus',async()=>{        // 在资源管理器里删完文件切回来，列表/对照表自动跟上
+  if(!unlocked)return;
+  try{await loadList();await loadPairs()}catch(e){await refreshState()}
+});
 addEventListener('pagehide',()=>{navigator.sendBeacon('/api/lock',new Blob(['{}'],{type:'text/plain'}))});
 const st=document.createElement('style');
 st.textContent='@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}';

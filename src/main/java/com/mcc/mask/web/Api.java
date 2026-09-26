@@ -287,20 +287,35 @@ public final class Api {
                 }
             }
         }
+        // 链式判定：本条的假值又被当成"原值"脱过第二次（脱敏产物再脱一遍留下的脏数据）
+        java.util.Set<String> allOrigs = new java.util.HashSet<>();
+        for (Map<String, String> m : session.book().maps().values()) {
+            allOrigs.addAll(m.keySet());
+        }
         List<Map<String, Object>> all = new ArrayList<>();
         int hidden = 0;
+        int chained = 0;
         for (Map.Entry<String, Map<String, String>> byRule : session.book().maps().entrySet()) {
             for (Map.Entry<String, String> e : byRule.getValue().entrySet()) {
+                boolean isChained = allOrigs.contains(e.getValue());
                 if (visible != null && !visible.contains(byRule.getKey() + "\u0001" + e.getKey())) {
                     hidden++;
                     continue;
+                }
+                if (isChained) {
+                    chained++;
                 }
                 if (!needle.isEmpty()
                         && !e.getKey().toLowerCase(Locale.ROOT).contains(needle)
                         && !e.getValue().toLowerCase(Locale.ROOT).contains(needle)) {
                     continue;
                 }
-                all.add(Map.of("rule", byRule.getKey(), "orig", e.getKey(), "fake", e.getValue()));
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("rule", byRule.getKey());
+                row.put("orig", e.getKey());
+                row.put("fake", e.getValue());
+                row.put("chained", isChained);
+                all.add(row);
             }
         }
         int from = Math.min((page - 1) * PAGE, all.size());
@@ -308,6 +323,7 @@ public final class Api {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("total", all.size());
         m.put("hidden", hidden);
+        m.put("chained", chained);
         m.put("scoped", visible != null);
         m.put("page", page);
         m.put("pageSize", PAGE);
