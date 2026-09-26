@@ -198,6 +198,28 @@ class ApiHttpTest {
     }
 
     @Test
+    void 清理失效映射_销毁码本_重复脱敏护栏() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令A\"}");
+        post("/api/run", "{\"mode\":\"mask\",\"files\":[\"台账.csv\",\"报告.md\"]}");
+
+        Http again = post("/api/run", "{\"mode\":\"mask\",\"files\":[\"台账.masked.csv\"]}");
+        assertTrue(again.has("\"ok\":false"), again.body);
+        assertTrue(again.has("链式映射"), "再脱一遍要被拦住并说明: " + again.body);
+
+        Files.delete(root.resolve("台账.masked.csv"));
+        Http pruned = post("/api/book/prune", "{}");
+        assertEquals(200, pruned.status, pruned.body);
+        assertTrue(pruned.has("\"removed\":5"), pruned.body);
+        assertTrue(get("/api/pairs?scope=all").has("\"total\":1"), "清理后 scope=all 也只剩在档那条");
+
+        assertEquals(400, post("/api/book/purge", "{}").status, "没带 confirm 不许销毁");
+        Http done = post("/api/book/purge", "{\"confirm\":true}");
+        assertEquals(200, done.status, done.body);
+        assertFalse(Files.exists(root.resolve("mb").resolve("book.mccmask")), "码本文件应被覆写删除");
+        assertTrue(get("/api/state").has("\"unlocked\":false"));
+    }
+
+    @Test
     void 错口令与路径越界与锁定() throws Exception {
         post("/api/book/new", "{\"pass\":\"口令A\"}");
         assertEquals(200, post("/api/lock", "{}").status);

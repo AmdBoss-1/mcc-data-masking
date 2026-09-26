@@ -81,6 +81,7 @@ public final class Api {
             case "/api/book/new" -> bookNew(body);
             case "/api/book/unlock" -> bookUnlock(body);
             case "/api/book/purge" -> bookPurge(body);
+            case "/api/book/prune" -> bookPrune();
             case "/api/lock" -> {
                 requireUnlock();
                 session.lock();
@@ -150,14 +151,50 @@ public final class Api {
 
     private Resp bookPurge(byte[] body) {
         requireUnlock();
-        char[] pass = passOf(body);
+        if (!parse(body).path("confirm").asBoolean(false)) {
+            throw new MaskException("销毁码本需要前端二次确认（confirm=true）");
+        }
         Path file = session.bookFile();
         if (!BookIo.purge(file)) {
             throw new MaskException("码本文件已不在: " + file);
         }
         session.lock();
-        wipe(pass);
         return Resp.json(200, ok(Map.of("purged", file.toString())), om);
+    }
+
+    /** 清理「产物已不在工作目录」的映射：码本瘦身，但仍保留在档产物能还原的部分。 */
+    private Resp bookPrune() {
+        requireUnlock();
+        Codebook book = session.book();
+        Map<String, java.util.List<String>> byFile = book.json().byFile;
+        if (byFile.isEmpty()) {
+            throw new MaskException("这本码本没有产物归属信息（老版本创建的），只能整本销毁重建");
+        }
+        java.util.Set<String> live = new java.util.HashSet<>();
+        for (Map.Entry<String, java.util.List<String>> e : byFile.entrySet()) {
+            if (productExists(e.getKey())) {
+                live.addAll(e.getValue());
+            }
+        }
+        int removed = 0;
+        java.util.Iterator<Map.Entry<String, Map<String, String>>> it = book.json().maps.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Map<String, String>> byRule = it.next();
+            java.util.Iterator<Map.Entry<String, String>> vals = byRule.getValue().entrySet().iterator();
+            while (vals.hasNext()) {
+                Map.Entry<String, String> e = vals.next();
+                if (!live.contains(byRule.getKey() + "" + e.getKey())) {
+                    vals.remove();
+                    removed++;
+                }
+            }
+            if (byRule.getValue().isEmpty()) {
+                it.remove();
+            }
+            byFile.entrySet().removeIf(f -> !productExists(f.getKey()));
+        }
+        BookIo.save(session.bookFile(), session.pass(), book);
+        return Resp.json(200, ok(Map.of("removed", removed)), om);
     }
 
     private Resp ls(String relDir) {
@@ -197,6 +234,9 @@ public final class Api {
             r.put("file", rel);
             try {
                 Path in = ws.resolve(rel);
+                if (mode.equals("mask") && in.getFileName().toString().matches(".*[.](masked|restored)[.].*")) {
+                    throw new MaskException("这是脱敏/还原产物，已跳过：再脱一遍会把假值当原值，码本里会多出一串链式映射。要处理请先改回原始文件。");
+                }
                 Path out = Paths0.sib(in, mode.equals("mask") ? MASK_OUT_SUFFIX : UNMASK_OUT_SUFFIX);
                 Summary sum = new Summary();
                 Ctx ctx = new Ctx(book, rules, mode.equals("unmask"), sum, jitter);

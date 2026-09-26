@@ -346,13 +346,16 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
         <div class="search">
           <input id="pq" type="search" placeholder="搜原值或假值" aria-label="搜索对照表">
           <button class="quiet" id="pSearch"><svg class="i s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-3.6-3.6"/></svg></button>
-          <button class="quiet" id="clearQ">清空</button>
+          <button class="quiet" id="clearQ" title="只清掉搜索框里的关键字">清除筛选</button>
         </div>
         <div class="auditwrap">
           <table class="grid"><thead><tr><th style="width:56px">类别</th><th>原值</th><th>假值</th><th style="width:46px"></th></tr></thead>
             <tbody id="pairs"></tbody></table>
         </div>
         <div class="pager"><span id="pInfo"></span>
+          <span style="flex:1"></span>
+          <button class="quiet" id="pruneBtn" title="删除产物已不在工作目录的映射（在档产物的映射保留）">清理失效映射</button>
+          <button class="quiet" id="purgeBtn" title="覆写并删除整本码本">销毁码本</button>
           <button class="quiet" id="pPrev">上一页</button><button class="quiet" id="pNext">下一页</button>
           <button class="danger" id="exportBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 18h14"/></svg>导出 CSV</button>
         </div>
@@ -654,6 +657,18 @@ $('#onlySupported').onchange=loadList;$('#filter').oninput=loadList;
 $('#pSearch').onclick=()=>{page=1;loadPairs()};
 $('#clearQ').onclick=()=>{$('#pq').value='';page=1;loadPairs()};
 $('#pq').onkeydown=e=>{if(e.key==='Enter'){page=1;loadPairs()}};
+$('#pruneBtn').onclick=async()=>{
+  const n=(await api('/api/pairs')).hidden;
+  if(!confirm('清理映射：删除 '+n+' 条「产物已不在工作目录」的映射。\n在档产物能还原的映射会保留。\n\n注意：删掉的映射再也无法还原对应的假值。确认清理？'))return;
+  try{const j=await post('/api/book/prune',{});$('#runInfo').textContent='已清理 '+j.removed+' 条失效映射';page=1;await loadPairs();await refreshState()}
+  catch(e){$('#upErr').textContent=e.message}
+};
+$('#purgeBtn').onclick=async()=>{
+  if(!confirm('销毁整本码本：文件会被覆写删除，全部映射不可恢复，之后需要重新新建码本。\n\n只在确定再也不需要还原时才这么做。确认销毁？'))return;
+  if(!confirm('再确认一次：销毁后，之前发出去的脱敏件都无法还原。真要销毁？'))return;
+  try{await post('/api/book/purge',{confirm:true});$('#runInfo').textContent='码本已销毁';await refreshState()}
+  catch(e){$('#upErr').textContent=e.message}
+};
 $('#pPrev').onclick=()=>{if(page>1){page--;loadPairs()}};
 $('#pNext').onclick=()=>{if(page*200<total){page++;loadPairs()}};
 $('#exportBtn').onclick=()=>{if(confirm('对照表含原值，导出后严禁发给 AI 或外发。确认导出？'))location.href='/api/export/pairs'+(scopeAll?'?scope=all':'')};
