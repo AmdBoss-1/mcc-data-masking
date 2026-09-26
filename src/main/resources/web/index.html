@@ -114,6 +114,22 @@ input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,185,90,.14)}
 .pane > header{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line-2)}
 .pane > header h2{margin:0;font-size:13.5px;font-weight:650;letter-spacing:.2px}
 .pane > header .meta{font-size:12px;color:var(--t3);margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pathbtn{margin-left:auto;max-width:62%;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;color:var(--gold-2)}
+.pathbtn .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker{position:fixed;inset:0;z-index:var(--z-modal);display:grid;place-items:center;background:rgba(8,5,3,.72)}
+.pkcard{width:min(720px,92vw);max-height:82vh;display:flex;flex-direction:column;background:#17110b;
+  border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
+.pkcard header{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line-2)}
+.pkcard h3{margin:0;font-size:14px;font-weight:650}
+.pkcard header .meta{color:var(--t3);font-size:12px;margin-left:auto;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkrow{display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+.pkrow input{flex:1;height:30px}
+.pklist{flex:1;overflow:auto;min-height:180px;padding:6px 8px}
+.pkitem{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px}
+.pkitem:hover{background:rgba(255,255,255,.06)}
+.pkitem .nm{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.pkcard footer{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line-2)}
+.pkcard footer .hint{flex:1;font-size:11.5px;color:var(--t4);line-height:1.5}
 .pane .body{padding:14px 15px;display:flex;flex-direction:column;flex:1}
 .pane .body.tight{padding:10px 15px 14px}
 
@@ -279,11 +295,34 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
   </ol>
 </section>
 
+<!-- 换目录 -->
+<div id="picker" class="picker hide">
+  <div class="pkcard">
+    <header><h3>选择工作目录</h3><span class="meta mono" id="pkPath"></span></header>
+    <div class="pkrow">
+      <button class="quiet" id="pkUp">上一层</button>
+      <button class="quiet" id="pkDrives">盘符</button>
+      <input id="pkInput" type="text" placeholder="也可直接粘贴路径，如 D:\台账">
+      <button class="quiet" id="pkGo">前往</button>
+    </div>
+    <div class="pklist" id="pkList"></div>
+    <footer>
+      <span class="hint">切过去后，文件区与产物都跟着新目录走；码本不跟着动（还是这本）。</span>
+      <button class="quiet" id="pkCancel">取消</button>
+      <button class="primary small" id="pkOk">就用这个目录</button>
+    </footer>
+  </div>
+</div>
+
 <!-- 工作台 -->
 <div id="main" class="shell locked">
   <!-- 文件 -->
   <section class="pane pane-files">
-    <header><h2>文件</h2><span class="meta mono" id="rootPath"></span></header>
+    <header><h2>文件</h2>
+      <button class="quiet pathbtn" id="rootBtn" title="点这里换一个工作目录">
+        <span class="mono" id="rootPath"></span>
+        <svg class="i s" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+      </button></header>
     <nav class="path" id="crumb" aria-label="目录路径"></nav>
     <div class="tools">
       <button class="quiet" id="upBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg>上级</button>
@@ -611,6 +650,19 @@ function selRes(){
   $('#resSel').textContent=`已选 ${sel.length} / ${all.length} 件`;
   $('#allRes').checked=all.length>0&&sel.length===all.length;
 }
+let pkPath='';
+async function openPicker(){ $('#picker').classList.remove('hide'); await pkLoad($('#rootPath').textContent.trim()); }
+async function pkLoad(p){
+  try{
+    const j=await api('/api/dirs'+(p?'?path='+encodeURIComponent(p):''));
+    pkPath=j.path; $('#pkPath').textContent=pkPath||'（选盘符）';
+    $('#pkUp').disabled=!j.parent; $('#pkUp').dataset.p=j.parent||'';
+    $('#pkInput').value=pkPath;
+    $('#pkList').innerHTML=j.dirs.map(d=>`<div class="pkitem" data-p="${esc(d.path)}">${ICON.folder}<span class="nm">${esc(d.name)}</span></div>`).join('')
+      ||'<div class="blank">这个目录下没有子目录</div>';
+    $$('#pkList .pkitem').forEach(el=>el.onclick=()=>pkLoad(el.dataset.p));
+  }catch(e){ $('#pkList').innerHTML='<div class="blank">'+esc(e.message)+'</div>'; }
+}
 const absPath=rel=>{
   const root=$('#rootPath').textContent.replace(/[\\/]+$/,'');
   const sep=root.includes('\\')?'\\':'/';
@@ -652,6 +704,16 @@ $('#cpAllBtn').onclick=async()=>{
   if(!paths.length){$('#upErr').textContent='先选中要复制的产物';return}
   const how=await copyText(paths.join(String.fromCharCode(10)));
   if(how!=='manual')$('#runInfo').textContent='已复制 '+paths.length+' 条路径';
+};
+$('#rootBtn').onclick=openPicker;
+$('#pkCancel').onclick=()=>$('#picker').classList.add('hide');
+$('#pkDrives').onclick=()=>pkLoad('');
+$('#pkUp').onclick=()=>pkLoad($('#pkUp').dataset.p||'');
+$('#pkGo').onclick=()=>pkLoad($('#pkInput').value.trim());
+$('#pkInput').onkeydown=e=>{if(e.key==='Enter')pkLoad($('#pkInput').value.trim())};
+$('#pkOk').onclick=async()=>{
+  try{await post('/api/root',{path:pkPath});$('#picker').classList.add('hide');dir='';page=1;await refreshState();$('#runInfo').textContent='工作目录已切换'}
+  catch(e){$('#upErr').textContent=e.message}
 };
 $('#refreshBtn').onclick=async()=>{
   try{await loadList();await loadPairs()}catch(e){await refreshState()}

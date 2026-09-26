@@ -235,6 +235,28 @@ class ApiHttpTest {
     }
 
     @Test
+    void 页内切换工作目录() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令A\"}");
+        Path sub = Files.createDirectory(root.resolve("子库"));
+        Files.writeString(sub.resolve("a.csv"), "手机\n13900001122\n");
+
+        Http dirs = get("/api/dirs?path=" + enc(root.toString()));
+        assertEquals(200, dirs.status, dirs.body);
+        assertTrue(dirs.has("子库"), dirs.body);
+
+        String body = "{\"path\":\"" + sub.toString().replace("\\", "\\\\") + "\"}";
+        Http set = post("/api/root", body);
+        assertEquals(200, set.status, set.body);
+        assertTrue(get("/api/state").has("子库"), "状态里的根应换成新目录");
+        assertTrue(get("/api/ls").has("a.csv"), "文件区应以新目录为根");
+        assertEquals(400, get("/file?path=" + enc("../台账.csv")).status, "换根后越界照样拒");
+
+        String back = "{\"path\":\"" + root.toString().replace("\\", "\\\\") + "\"}";
+        assertEquals(200, post("/api/root", back).status);
+        assertTrue(get("/api/ls").has("台账.csv"), "切回来还在");
+    }
+
+    @Test
     void 错口令与路径越界与锁定() throws Exception {
         post("/api/book/new", "{\"pass\":\"口令A\"}");
         assertEquals(200, post("/api/lock", "{}").status);

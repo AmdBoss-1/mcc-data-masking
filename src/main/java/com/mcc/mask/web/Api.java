@@ -46,7 +46,7 @@ public final class Api {
     private static final String MASK_OUT_SUFFIX = ".masked";
     private static final String UNMASK_OUT_SUFFIX = ".restored";
 
-    private final Workspace ws;
+    private Workspace ws;
     private final Session session;
     private final ObjectMapper om = new ObjectMapper();
     private final String bookDir;
@@ -88,6 +88,8 @@ public final class Api {
                 yield Resp.json(200, ok(Map.of()), om);
             }
             case "/api/ls" -> ls(query.getOrDefault("dir", ""));
+            case "/api/root" -> setRoot(body);
+            case "/api/dirs" -> dirs(query.get("path"));
             case "/api/run" -> run(body);
             case "/api/pairs" -> pairs(query);
             case "/api/export/pairs" -> exportPairs(query);
@@ -195,6 +197,68 @@ public final class Api {
         }
         BookIo.save(session.bookFile(), session.pass(), book);
         return Resp.json(200, ok(Map.of("removed", removed)), om);
+    }
+
+    /** 页内切换工作目录（只本机可达，选择后文件区即以它为根）。 */
+    private Resp setRoot(byte[] body) {
+        requireUnlock();
+        String p = parse(body).path("path").asText("").trim();
+        if (p.isEmpty()) {
+            throw new MaskException("目录不能为空");
+        }
+        Path dir = Path.of(p);
+        if (!Files.isDirectory(dir)) {
+            throw new MaskException("目录不存在: " + dir);
+        }
+        ws = new Workspace(dir);
+        Path bookParent = BookIo.resolve(bookDir, false).getParent();
+        if (bookParent != null) {
+            ws.hide(bookParent);
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("root", ws.root().toString());
+        return Resp.json(200, ok(m), om);
+    }
+
+    /** 目录浏览（供页内选择器）：给空则列盘符，否则列该目录下的子目录。 */
+    private Resp dirs(String path) {
+        requireUnlock();
+        List<Map<String, Object>> out = new ArrayList<>();
+        String cur = path == null ? "" : path.trim();
+        try {
+            if (cur.isEmpty()) {
+                for (char c = 'A'; c <= 'Z'; c++) {
+                    Path d = Path.of(c + ":\\");
+                    if (Files.isDirectory(d)) {
+                        out.add(Map.of("name", c + ":", "path", d.toString()));
+                    }
+                }
+                if (out.isEmpty()) {
+                    out.add(Map.of("name", "/", "path", "/"));
+                }
+            } else {
+                Path dir = Path.of(cur);
+                if (!Files.isDirectory(dir)) {
+                    throw new MaskException("目录不存在: " + dir);
+                }
+                try (var stream = Files.list(dir)) {
+                    for (Path p : stream.sorted().toList()) {
+                        String n = p.getFileName().toString();
+                        if (Files.isDirectory(p) && !n.startsWith("$") && !n.equals("System Volume Information")) {
+                            out.add(Map.of("name", n, "path", p.toString()));
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new MaskException("列目录失败: " + e.getMessage(), e);
+        }
+        Path parent = cur.isEmpty() ? null : Path.of(cur).getParent();
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("path", cur);
+        m.put("parent", parent == null ? "" : parent.toString());
+        m.put("dirs", out);
+        return Resp.json(200, ok(m), om);
     }
 
     private Resp ls(String relDir) {
