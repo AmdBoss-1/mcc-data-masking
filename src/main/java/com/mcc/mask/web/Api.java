@@ -87,7 +87,7 @@ public final class Api {
                 session.lock();
                 yield Resp.json(200, ok(Map.of()), om);
             }
-            case "/api/ls" -> ls(query.getOrDefault("dir", ""));
+            case "/api/ls" -> ls(query);
             case "/api/root" -> setRoot(body);
             case "/api/dirs" -> dirs(query.get("path"));
             case "/api/run" -> run(body);
@@ -261,18 +261,19 @@ public final class Api {
         return Resp.json(200, ok(m), om);
     }
 
-    private Resp ls(String relDir) {
+    private Resp ls(Map<String, String> q) {
         requireUnlock();
-        String dir = relDir == null ? "" : relDir;
+        String dir = q.getOrDefault("dir", "");
+        boolean deep = "1".equalsIgnoreCase(q.get("deep")) || "true".equalsIgnoreCase(q.get("deep"));
         if (Workspace.UPLOAD_DIR_NAME.equals(dir)) {
             ws.uploadDir();   // 还没传过东西时也要能进去看（空目录）
         }
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Workspace.Entry e : ws.list(dir)) {
+        for (Workspace.Entry e : ws.list(dir, deep)) {
             rows.add(Map.of("name", e.name(), "rel", e.rel(), "dir", e.dir(),
                     "size", e.size(), "mtime", e.mtime(), "supported", e.supported()));
         }
-        return Resp.json(200, ok(Map.of("dir", dir, "entries", rows)), om);
+        return Resp.json(200, ok(Map.of("dir", dir, "deep", deep, "entries", rows)), om);
     }
 
     private synchronized Resp run(byte[] body) {
@@ -455,16 +456,56 @@ public final class Api {
         return Resp.json(200, ok(m), om);
     }
 
-    private Resp upload(byte[] body, String contentType) {
+    /**
+     * 上传：一次可以收多个文件（拖文件夹时前端分批打包过来）。
+     * 每个文件可选带一个同名的 {@code path} 字段保留相对子路径，没带就只取文件名。
+     */
+    private synchronized Resp upload(byte[] body, String contentType) {
         requireUnlock();
         String boundary = boundaryOf(contentType);
         List<Multipart.Part> parts = Multipart.parse(body, boundary);
-        Multipart.Part file = parts.stream().filter(p -> p.fileName() != null && !p.fileName().isEmpty())
-                .findFirst().orElseThrow(() -> new MaskException("没收到文件"));
-        Path landed = ws.land(file.fileName(), file.data());
-        String rel = ws.relativize(landed);
-        return Resp.json(200, ok(Map.of("rel", rel, "name", landed.getFileName().toString(),
-                "size", landed.toFile().length())), om);
+        List<Multipart.Part> files = parts.stream()
+                .filter(p -> p.fileName() != null && !p.fileName().isEmpty()).toList();
+        if (files.isEmpty()) {
+            throw new MaskException("没收到文件");
+        }
+        List<Map<String, Object>> landedFiles = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int i = 0;
+        for (Multipart.Part f : files) {
+            String rel = pathOf(parts, f, i++);
+            try {
+                Path p = ws.landIn(rel, f.data());
+                landedFiles.add(Map.of("rel", ws.relativize(p),
+                        "name", p.getFileName().toString(), "size", p.toFile().length()));
+            } catch (MaskException e) {
+                errors.add(rel + " — " + e.getMessage());
+            }
+        }
+        if (landedFiles.isEmpty()) {
+            throw new MaskException("文件都没落地：" + String.join("；", errors));
+        }
+        Map<String, Object> first = landedFiles.get(0);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("rel", first.get("rel"));
+        out.put("name", first.get("name"));
+        out.put("size", first.get("size"));
+        out.put("count", landedFiles.size());
+        out.put("files", landedFiles);
+        out.put("errors", errors);
+        return Resp.json(200, ok(out), om);
+    }
+
+    /** 取这个文件对应的相对路径： multipart 里同名字段按出现顺序排，file 前面第 k 个 path 就是它的。 */
+    private static String pathOf(List<Multipart.Part> parts, Multipart.Part file, int index) {
+        List<String> paths = parts.stream()
+                .filter(p -> "path".equals(p.name()) && p.fileName() == null)
+                .map(p -> new String(p.data(), StandardCharsets.UTF_8).trim())
+                .toList();
+        if (index < paths.size() && !paths.get(index).isEmpty()) {
+            return paths.get(index);
+        }
+        return file.fileName();
     }
 
     /** 打包下载：把选中的产物打成 zip（浏览器一次只弹一个保存框，选中多个也不烦）。 */

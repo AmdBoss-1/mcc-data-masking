@@ -4,7 +4,7 @@
 
 ## 状态
 
-🟢 **v1.1.0**：引擎 v1.0.0（CLI）44 项测试 + 网页控制台 15 项 = **59 项全绿**；真 jar 端到端实测过（脱敏→还原**字节完全相同**），控制台无头浏览器全流程 23 项断言通过并留截图。设计正本：`项目群文档中心\08-项目设计\MCC脱敏工具-v1设计-20260924.md`（引擎）+ `MCC脱敏工具-网页控制台-v1设计-20260924.md`（UI）。
+🟢 **v1.1.0**：引擎 49 项测试 + 网页控制台 20 项 = **69 项全绿**；真 jar 端到端实测过（脱敏→还原**字节完全相同**），控制台无头浏览器全流程 63 项断言通过并留截图。设计正本：`项目群文档中心\08-项目设计\MCC脱敏工具-v1设计-20260924.md`（引擎）+ `MCC脱敏工具-网页控制台-v1设计-20260924.md`（UI）。
 
 ## 产物与用法
 
@@ -31,9 +31,10 @@ java -jar dist/mcc-mask.jar serve --root D:\台账 --port 8098 --open
 
 - 码本默认落在 `root\maskbook\`（可用 `--book` 换目录）；`--idle-min` 改自动锁时长（默认 30 分钟）
 - 页内动线：解锁/新建码本 → 勾文件（可多选批量）→ 脱敏或还原 → 结果卡下载产物 → 对照表搜索/导出 → 单点反查
-- 拖拽上传落 `root\.mcc-upload\`（单件上限 512MB），上传后自动切到「上传区」并全选，直接还原
+- 拖拽：**拖到页面任何位置都收**（整屏「松手即收」遮罩），文件和文件夹都行；文件夹连子目录落到 `root\.mcc-upload\<文件夹>\`（≤300 件、单件 ≤512MB、≤12 层，点开头目录与 Thumbs.db 不收），收完自动进该目录并切「含子目录」视图一次全选、自动切「还原」；也可点「选择文件 / 选择文件夹」
+- 换工作目录走文件区右上角的**目录选择器**（拖文件夹做不到：浏览器不把拖入项的真实磁盘路径交给网页），码本不跟着换
 - 零外链：页面打进 jar，断网可用；口令只在服务端内存，刷新页面即锁
-- 实测截图：`docs\verify\web-*.png`（10 张，含错口令 / 不支持格式 / 刷新即锁三个错误态）
+- 实测截图：`docs\verify\*.png`（17 张，含错口令 / 不支持格式 / 刷新即锁三个错误态 + 拖文件遮罩 / 拖入文件夹 / 整批还原）
 
 ## 能力与已知边界
 
@@ -56,9 +57,9 @@ MCC脱敏工具/
 ├─ pom.xml                   ← Java 17 + POI 5.2.5 + H2 + PDFBox + picocli
 ├─ src/main/java/com/mcc/mask/{Main,MaskException, cli, codebook, rules, scan, rw, util, web}
 ├─ src/main/resources/{default-rules.json, web/index.html}   ← 默认规则表 + 控制台单文件页面（零外链）
-├─ src/test/java/...          ← 59 项测试（引擎 44 + web 15：Workspace/Session/ApiHttp/ServeSmoke）
+├─ src/test/java/...          ← 69 项测试（引擎 49 + web 20：Workspace/Session/ApiHttp/ServeSmoke）
 ├─ src/test/resources/sample.doc           ← .doc 夹具（Word COM 生成的纯假数据）
 ├─ tools/build.ps1            ← 打包脚本
-├─ docs/verify/web-*.png      ← 控制台无头浏览器实测截图（10 张，含三个错误态）
+├─ docs/verify/*.png          ← 控制台无头浏览器实测截图（17 张，含三个错误态 + 拖拽三张）
 └─ docs/log/变更日志.md        ← 项目级记账（设计文档正本在群级 08-项目设计）
 ```

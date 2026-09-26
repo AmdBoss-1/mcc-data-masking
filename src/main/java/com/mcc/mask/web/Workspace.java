@@ -21,6 +21,10 @@ public final class Workspace {
 
     public static final String UPLOAD_DIR_NAME = ".mcc-upload";
     public static final long MAX_UPLOAD_BYTES = 512L * 1024 * 1024;
+    /** 拖文件夹进来时允许的层级深度（含文件名那一段）。 */
+    public static final int MAX_UPLOAD_DEPTH = 12;
+    /** 递归列目录时最多列这么多文件，免得一次拖几万个把页面卡死。 */
+    public static final int MAX_LIST_ENTRIES = 3000;
 
     private static final DateTimeFormatter MT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
@@ -83,30 +87,29 @@ public final class Workspace {
 
     /** 上传落地：只取文件名（丢掉任何路径成分），重名自动加序号。 */
     public Path land(String rawName, byte[] data) {
+        int slash = rawName == null ? -1
+                : rawName.replace('\\', '/').lastIndexOf('/');
+        return landIn(slash >= 0 ? rawName.substring(slash + 1) : rawName, data);
+    }
+
+    /**
+     * 上传落地（保留相对子路径）：拖整个文件夹进来时用它，把 <code>AI产物/三月/台账.csv</code>
+     * 落成 <code>.mcc-upload/AI产物/三月/台账.csv</code>，不拍扁、不重名覆盖。
+     * 路径只能向上停在上传目录内：每一段都过滤非法字符，出现 <code>..</code> 直接拒绝。
+     */
+    public Path landIn(String relPath, byte[] data) {
         if (data.length > MAX_UPLOAD_BYTES) {
-            throw new MaskException("文件超过 512MB 上限: " + rawName);
+            throw new MaskException("文件超过 512MB 上限: " + relPath);
         }
-        String clean = rawName == null ? "" : rawName.replace('\\', '/');
-        int slash = clean.lastIndexOf('/');
-        if (slash >= 0) {
-            clean = clean.substring(slash + 1);
-        }
-        clean = clean.replaceAll("[\\x00-\\x1F\"<>|:*?]", "_").trim();
-        if (clean.isEmpty() || ".".equals(clean) || "..".equals(clean)) {
-            throw new MaskException("非法文件名");
-        }
+        List<String> segs = segments(relPath);
         Path dir = uploadDir();
-        Path target = dir.resolve(clean);
-        int n = 1;
-        while (Files.exists(target)) {
-            int dot = clean.lastIndexOf('.');
-            target = dot > 0
-                    ? dir.resolve(clean.substring(0, dot) + "-" + n + clean.substring(dot))
-                    : dir.resolve(clean + "." + n);
-            n++;
+        for (int i = 0; i < segs.size() - 1; i++) {
+            dir = dir.resolve(segs.get(i));
         }
+        String name = segs.get(segs.size() - 1);
+        Path target = unique(dir, name);
         try {
-            Files.createFile(target);
+            Files.createDirectories(dir);
             Files.write(target, data);
         } catch (IOException e) {
             throw new MaskException("上传落盘失败: " + e.getMessage(), e);
@@ -114,26 +117,102 @@ public final class Workspace {
         return target;
     }
 
+    /** 拆出安全的路径段：丢掉空段和点段，逐段清洗，越界即拒。 */
+    private static List<String> segments(String raw) {
+        String s = raw == null ? "" : raw.replace('\\', '/');
+        List<String> out = new ArrayList<>();
+        for (String part : s.split("/")) {
+            String seg = part.replaceAll("[\\x00-\\x1F\"<>|:*?]", "_").trim();
+            if (seg.isEmpty() || ".".equals(seg)) {
+                continue;
+            }
+            if ("..".equals(seg)) {
+                throw new MaskException("上传路径越出上传目录，已拒绝: " + raw);
+            }
+            if (seg.length() > 120) {
+                seg = seg.substring(0, 120);
+            }
+            out.add(seg);
+        }
+        if (out.isEmpty()) {
+            throw new MaskException("非法文件名");
+        }
+        if (out.size() > MAX_UPLOAD_DEPTH) {
+            throw new MaskException("目录层级太深（超过 " + MAX_UPLOAD_DEPTH + " 层）: " + raw);
+        }
+        return out;
+    }
+
+    /** 同目录重名自动加序号，不覆盖已有文件。 */
+    private static Path unique(Path dir, String name) {
+        Path target = dir.resolve(name);
+        int n = 1;
+        while (Files.exists(target)) {
+            int dot = name.lastIndexOf('.');
+            target = dot > 0
+                    ? dir.resolve(name.substring(0, dot) + "-" + n + name.substring(dot))
+                    : dir.resolve(name + "." + n);
+            n++;
+        }
+        return target;
+    }
+
     public List<Entry> list(String relDir) {
+        return list(relDir, false);
+    }
+
+    /**
+     * 列目录。{@code deep} 为真时递归列出所有子目录里的文件（拖完一整个文件夹后要一次全选），
+     * 此时名字带子路径，如 <code>三月/交付.md</code>。
+     */
+    public List<Entry> list(String relDir, boolean deep) {
         Path dir = resolve(relDir == null ? "" : relDir);
         List<Entry> out = new ArrayList<>();
-        try (var stream = Files.list(dir)) {
-            for (Path p : stream.toList()) {
-                String name = p.getFileName().toString();
-                if (name.equals(UPLOAD_DIR_NAME) || name.equals(".gitignore") || name.endsWith(".tmp")
-                        || hidden.contains(p.toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT))) {
-                    continue;
+        try {
+            if (deep) {
+                walk(dir, dir, out);
+            } else {
+                for (Path p : Files.list(dir).toList()) {
+                    String name = p.getFileName().toString();
+                    if (skip(p, name)) {
+                        continue;
+                    }
+                    out.add(entry(dir, p, name));
                 }
-                boolean isDir = Files.isDirectory(p);
-                long size = isDir ? 0 : Files.size(p);
-                String mtime = MT.format(Instant.ofEpochMilli(Files.getLastModifiedTime(p).toMillis()));
-                out.add(new Entry(name, relativize(p), isDir, size, mtime, !isDir && supported(name)));
             }
         } catch (IOException e) {
             throw new MaskException("列目录失败: " + e.getMessage(), e);
         }
         out.sort(Comparator.comparing((Entry e) -> !e.dir()).thenComparing(e -> e.name().toLowerCase(Locale.ROOT)));
         return out;
+    }
+
+    private void walk(Path base, Path dir, List<Entry> out) throws IOException {
+        if (out.size() >= MAX_LIST_ENTRIES) {
+            return;
+        }
+        for (Path p : Files.list(dir).toList()) {
+            String name = p.getFileName().toString();
+            if (Files.isDirectory(p)) {
+                if (!skip(p, name)) {
+                    walk(base, p, out);
+                }
+            } else if (!skip(p, name) && out.size() < MAX_LIST_ENTRIES) {
+                out.add(entry(base, p, base.relativize(p).toString().replace('\\', '/')));
+            }
+        }
+    }
+
+    private boolean skip(Path p, String name) {
+        return name.startsWith(".") || name.endsWith(".tmp")
+                || hidden.contains(p.toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT));
+    }
+
+    private Entry entry(Path base, Path p, String name) throws IOException {
+        boolean isDir = Files.isDirectory(p);
+        long size = isDir ? 0 : Files.size(p);
+        String mtime = MT.format(Instant.ofEpochMilli(Files.getLastModifiedTime(p).toMillis()));
+        return new Entry(name, relativize(p), isDir, size, mtime, !isDir && supported(name));
     }
 
     private static boolean supported(String name) {

@@ -3,3 +3,4 @@ dist/
 maskbook/
 *.mccmask
 dependency-reduced-pom.xml
+logs/

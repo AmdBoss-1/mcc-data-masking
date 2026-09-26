@@ -77,8 +77,31 @@ class ApiHttpTest {
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body)));
     }
 
-    private static String enc(String s) {
-        return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
+    /** 一次请求收多件（拖文件夹的路径），每件带一个 path 字段保留相对子路径。 */
+    private record Up(String fileName, String path, byte[] data) {
+    }
+
+    private Http postUpload(String url, java.util.List<Up> ups) throws Exception {
+        String b = "----mccbatch";
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        for (Up u : ups) {
+            bos.write(("--" + b + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\""
+                    + u.fileName() + "\"\r\nContent-Type: application/octet-stream\r\n\r\n")
+                    .getBytes(StandardCharsets.UTF_8));
+            bos.write(u.data());
+            bos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+            bos.write(("--" + b + "\r\nContent-Disposition: form-data; name=\"path\"\r\n\r\n")
+                    .getBytes(StandardCharsets.UTF_8));
+            bos.write(u.path().getBytes(StandardCharsets.UTF_8));
+            bos.write("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+        bos.write(("--" + b + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        return send(HttpRequest.newBuilder(URI.create(base + url))
+                .header("Content-Type", "multipart/form-data; boundary=" + b)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(bos.toByteArray())));
+    }
+
+    private static String enc(String s) {        return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 
     private Http send(HttpRequest.Builder rb) throws Exception {
@@ -137,6 +160,34 @@ class ApiHttpTest {
         assertEquals(200, csv.status);
         assertTrue(csv.disposition.contains("filename*=UTF-8''%E5%AF%B9%E7%85%A7%E8%A1%A8.csv"), csv.disposition);
         assertTrue(csv.has("昆山精密五金厂"), csv.body);
+    }
+
+    @Test
+    void 拖文件夹一次多件_保留子目录_越界那件单独报错() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令拖\"}");
+        post("/api/run", "{\"mode\":\"mask\",\"files\":[\"报告.md\"]}");
+        String fake = Files.readString(root.resolve("报告.masked.md"));
+        Http up = postUpload("/api/upload", java.util.List.of(
+                new Up("汇总.md", "AI产物/汇总.md", ("# 汇总\n" + fake).getBytes(StandardCharsets.UTF_8)),
+                new Up("反馈.md", "AI产物/三月/反馈.md", ("三月 " + fake).getBytes(StandardCharsets.UTF_8)),
+                new Up("evil.md", "AI产物/../../evil.md", "x".getBytes(StandardCharsets.UTF_8))));
+        assertEquals(200, up.status, up.body);
+        assertTrue(up.has("\"count\":2"), up.body);
+        assertTrue(up.has(".mcc-upload/AI产物/三月/反馈.md"), up.body);
+        assertTrue(up.has("evil.md"), "越界那件要单独报出来: " + up.body);
+        assertFalse(Files.exists(root.resolve("evil.md")));
+        assertFalse(Files.exists(root.getParent().resolve("evil.md")));
+
+        Http ls = get("/api/ls?dir=" + enc(".mcc-upload"));
+        assertTrue(ls.has("\"name\":\"AI产物\""), ls.body);
+        Http sub = get("/api/ls?dir=" + enc(".mcc-upload/AI产物/三月"));
+        assertTrue(sub.has("反馈.md"), sub.body);
+
+        Http run = post("/api/run", "{\"mode\":\"unmask\",\"files\":[\".mcc-upload/AI产物/三月/反馈.md\"]}");
+        assertEquals(200, run.status, run.body);
+        assertTrue(run.has("\"hits\":1"), run.body);
+        assertTrue(Files.readString(root.resolve(".mcc-upload/AI产物/三月/反馈.restored.md"))
+                .contains("13800001111"), "子目录里的产物也要能还原");
     }
 
     @Test

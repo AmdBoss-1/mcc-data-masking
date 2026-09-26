@@ -50,6 +50,25 @@ class WorkspaceTest {
     }
 
     @Test
+    void 拖文件夹进来保留子目录_但越界与超深直接拒() throws Exception {
+        Workspace ws = new Workspace(root);
+        byte[] data = "车牌\n苏A12345\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Path in = ws.landIn("AI产物/三月/台账.csv", data);
+        assertEquals(".mcc-upload/AI产物/三月/台账.csv", ws.relativize(in));
+        Path same = ws.landIn("AI产物/三月/台账.csv", data);
+        assertFalse(in.equals(same), "同目录重名要避让，不能覆盖");
+        assertTrue(Files.exists(same));
+        assertThrows(MaskException.class, () -> ws.landIn("AI产物/../../evil.csv", data));
+        assertThrows(MaskException.class, () -> ws.landIn("../outside.csv", data));
+        StringBuilder deep = new StringBuilder();
+        for (int i = 0; i <= Workspace.MAX_UPLOAD_DEPTH; i++) {
+            deep.append("d").append(i).append('/');
+        }
+        assertThrows(MaskException.class, () -> ws.landIn(deep + "x.csv", data));
+        assertFalse(Files.exists(root.resolveSibling("evil.csv")));
+    }
+
+    @Test
     void 超大上传直接拒绝() {
         Workspace ws = new Workspace(root);
         byte[] big = new byte[(int) (Workspace.MAX_UPLOAD_BYTES + 1)];

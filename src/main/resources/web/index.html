@@ -139,6 +139,9 @@ input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,185,90,.14)}
 .path button:hover{color:#fff;background:var(--panel-3)}
 .path .here{color:var(--t1);font-weight:600}
 .path .sl{opacity:.35;padding:0 1px}
+.path .deeptag{display:inline-flex;align-items:center;gap:7px;margin-left:9px;height:22px;padding:0 9px;
+  border-radius:999px;background:var(--gold-soft);border:1px solid rgba(240,185,90,.28);color:var(--gold-2);font-size:11.5px}
+.path .deeptag button{height:20px;padding:0;color:var(--gold-2);font-size:11.5px;text-decoration:underline}
 .tools{display:flex;align-items:center;gap:8px;padding:11px 15px 12px;border-bottom:1px solid var(--line-2)}
 .tools .grow{flex:1;min-width:120px}
 .tablewrap{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
@@ -212,6 +215,18 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .drop:hover{border-color:rgba(240,185,90,.45);color:var(--t2);background:rgba(240,185,90,.05)}
 .drop.hot{border-color:var(--gold);border-style:solid;color:var(--gold-2);background:var(--gold-soft)}
 .drop svg{width:30px;height:30px;stroke:currentColor;flex:none;opacity:.8}
+.drop .pickline{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+/* 拖拽遮罩：整个工作台都是上传口，不必瞄准那一小块 */
+.veil{position:fixed;inset:0;z-index:38;display:none;align-items:center;justify-content:center;
+  background:rgba(11,8,4,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:24px}
+.veil.on{display:flex;animation:fadein .14s var(--ease) both}
+.veil .box{display:flex;flex-direction:column;align-items:center;gap:11px;text-align:center;
+  padding:34px 46px;border-radius:16px;border:1.5px dashed var(--gold);background:rgba(28,21,12,.92);
+  color:var(--gold-2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
+.veil svg{width:38px;height:38px;stroke:currentColor;flex:none}
+.veil strong{font-size:16px;font-weight:600;color:var(--gold-2)}
+.veil span{font-size:12.5px;color:var(--t3);line-height:1.7}
+.veil .to{color:var(--t4);font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
 .how{list-style:none;margin:auto 0 0;padding:14px 0 0;display:grid;gap:9px;font-size:12.5px;color:var(--t3)}
 .how li{display:flex;gap:9px;align-items:flex-start}
 .how .k{color:var(--gold-2);font-family:ui-monospace,Consolas,monospace;font-size:11.5px;padding-top:1px}
@@ -295,6 +310,16 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
   </ol>
 </section>
 
+<!-- 拖拽遮罩：整个工作台都是上传口 -->
+<div id="veil" class="veil">
+  <div class="box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V5m0 0L8 9m4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+    <strong>松手，收进上传区</strong>
+    <span>文件、文件夹都可以<br><b id="veilN"></b></span>
+    <span class="to">落到 工作目录/.mcc-upload，只在这台机器上</span>
+  </div>
+</div>
+
 <!-- 换目录 -->
 <div id="picker" class="picker hide">
   <div class="pkcard">
@@ -359,13 +384,18 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
         <button class="quiet" id="cpAllBtn"><svg class="i s" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>复制路径</button>
       </div>
       <div class="results" id="results"></div>
-      <div class="drop" id="drop" title="把 AI 产物拖到这里，或点一下选文件">
+      <div class="drop" id="drop" title="文件和文件夹都能拖进来（整个页面都能接），或点这里选文件">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V5m0 0L8 9m4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
-        <strong>把 AI 产物拖到这里</strong>
-        <span class="hintline">md / xlsx / docx / csv / txt 都行，点击这里也能选文件<br>放进来的会自动切到「上传区」并全选，切「还原」点开始即可</span>
-        <span class="chip">单件 ≤512MB</span>
+        <strong>把 AI 产物拖进来（文件、文件夹都行）</strong>
+        <span class="hintline">不止这一块能接——拖到页面任何位置都会盖上一层「松手即收」<br>文件夹连子目录一起收进 <code>.mcc-upload</code>，收完自动全选并切到「还原」，点开始即可</span>
+        <span class="pickline">
+          <button class="quiet" id="pickFile">选择文件</button>
+          <button class="quiet" id="pickDir">选择文件夹</button>
+        </span>
+        <span class="chip">单件 ≤512MB · 一次 ≤300 件</span>
       </div>
       <input type="file" id="file" class="hide" multiple>
+      <input type="file" id="dirFile" class="hide" multiple webkitdirectory>
       <div id="upErr" class="err" style="color:var(--red);font-size:12.5px;min-height:18px;margin-top:8px"></div>
     </div>
   </section>
@@ -436,7 +466,7 @@ const MODE={
   mask:{label:'开始脱敏',note:'<b>脱敏</b>：勾选的源数据换成假值，产出 <code>.masked</code> 副本，原件不动。'},
   unmask:{label:'开始还原',note:'<b>还原</b>：把 AI 回来的文件换回真值，产出 <code>.restored</code> 副本。'}
 };
-let unlocked=false, dir='', entries=[], page=1, total=0, mode='mask', tab='unlock', warns=[], scopeAll=false;
+let unlocked=false, dir='', deep=false, entries=[], page=1, total=0, mode='mask', tab='unlock', warns=[], scopeAll=false;
 const UPLOAD_DIR='.mcc-upload';
 
 async function api(p,o){
@@ -469,10 +499,11 @@ async function refreshState(){
 }
 
 /* ---------- 文件 ---------- */
+function go(d,isDeep){dir=d;deep=!!isDeep;return loadList()}
 async function loadList(){
   const upBtn=$('#upBtn');upBtn.disabled=!dir;
   try{
-    entries=(await api('/api/ls?dir='+encodeURIComponent(dir))).entries;
+    entries=(await api('/api/ls?dir='+encodeURIComponent(dir)+(deep?'&deep=1':''))).entries;
   }catch(e){
     entries=[];$('#list').innerHTML=`<tr><td colspan="4"><div class="blank">${ICON.blank}打不开这个目录<br>${esc(e.message)}</div></td></tr>`;
     return;
@@ -484,8 +515,10 @@ async function loadList(){
       ? `<button data-go="">根目录</button>`
       : `<button class="here" disabled>根目录</button>`)
     +segs.map((s,i)=>
-    `<span class="sl">/</span><button data-go="${esc(segs.slice(0,i+1).join('/'))}" class="${i===segs.length-1?'here':''}">${esc(s)}</button>`).join('');
-  $$('#crumb button').forEach(b=>b.onclick=()=>{dir=b.dataset.go;loadList()});
+    `<span class="sl">/</span><button data-go="${esc(segs.slice(0,i+1).join('/'))}" class="${i===segs.length-1?'here':''}">${esc(s)}</button>`).join('')
+    +(deep?'<span class="deeptag">含子目录<button class="text" id="shallow">只看这层</button></span>':'');
+  $$('#crumb button[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go,false));
+  const sh=$('#shallow');if(sh)sh.onclick=()=>go(dir,false);
   $('#list').innerHTML=rows.map(e=>e.dir
     ? `<tr class="dir"><td></td><td class="nm"><span class="wrap"><span class="ig">${ICON.folder}</span><span class="txt" data-cd="${esc(e.rel)}">${esc(e.name)}</span></span></td><td class="num">目录</td><td class="num"></td></tr>`
     : `<tr class="${e.supported?'':'no'}"><td><input type="checkbox" class="fchk" value="${esc(e.rel)}" ${e.supported?'':'disabled'} aria-label="${esc(e.name)}"></td>
@@ -495,7 +528,7 @@ async function loadList(){
         ? '上传区还是空的<br>把 AI 产物拖到右边「执行」栏的上传口<br><button class="quiet" id="upPick" style="margin-top:10px">选择文件上传</button>'
         : '这里没有可处理的文件<br>换个目录，或把 AI 产物拖到右侧上传区'}</div></td></tr>`;
   const pick=$('#upPick');if(pick)pick.onclick=()=>$('#file').click();
-  $$('#list [data-cd]').forEach(a=>a.onclick=()=>{dir=a.dataset.cd;loadList()});
+  $$('#list [data-cd]').forEach(a=>a.onclick=()=>go(a.dataset.cd,false));
   $$('#list tr').forEach(tr=>{
     const cb=tr.querySelector('.fchk');
     if(!cb||cb.disabled)return;
@@ -588,16 +621,104 @@ async function run(){
   btn.disabled=false;btn.querySelector('svg').classList.remove('spin');
   await loadPairs();await refreshState();
 }
-async function upload(files){
+const MAX_DROP_FILES=300, BATCH_BYTES=24*1024*1024, BATCH_N=40;
+/** items: [{file:File, path:'相对路径/文件名'}]，一次可多件，按体积和件数自动分片上传。 */
+async function upload(items){
+  if(!items||!items.length)return;
   $('#upErr').textContent='';
-  for(const f of files){
-    const fd=new FormData();fd.append('file',f,f.name);
-    try{const j=await api('/api/upload',{method:'POST',body:fd});$('#runInfo').textContent='已收 '+j.name}
-    catch(e){$('#upErr').textContent=e.message}
+  if(!unlocked){$('#upErr').textContent='先解锁码本才能收文件';return}
+  if(items.length>MAX_DROP_FILES){$('#upErr').textContent=`一次最多 ${MAX_DROP_FILES} 件，这次有 ${items.length} 件，请分几次拖`;return}
+  const parts=items.map(it=>it.path.split('/')).filter(p=>p.length>1).map(p=>p[0]);
+  const folder=parts.length===items.length&&new Set(parts).size===1?parts[0]:null;
+  const chunks=[];let cur=[],bytes=0;
+  for(const it of items){
+    if(cur.length&&(cur.length>=BATCH_N||bytes+it.file.size>BATCH_BYTES)){chunks.push(cur);cur=[];bytes=0}
+    cur.push(it);bytes+=it.file.size;
   }
-  dir=UPLOAD_DIR;await loadList();
-  $$('.fchk').forEach(c=>{c.checked=true;c.closest('tr').classList.add('pick')});selInfo();
+  if(cur.length)chunks.push(cur);
+  let got=0,skipped=0;const errs=[];
+  for(const ch of chunks){
+    const fd=new FormData();
+    for(const it of ch){fd.append('file',it.file,it.file.name);fd.append('path',it.path)}
+    $('#runInfo').textContent='收件中 '+got+' / '+items.length;
+    try{const j=await api('/api/upload',{method:'POST',body:fd});got+=j.count;errs.push(...(j.errors||[]))}
+    catch(e){errs.push(e.message)}
+  }
+  await go(folder?UPLOAD_DIR+'/'+folder:UPLOAD_DIR,!!folder);
+  $$('.fchk').forEach(c=>{if(!c.disabled){c.checked=true;c.closest('tr').classList.add('pick')}else skipped++});
+  selInfo();
+  $('#runInfo').textContent=`已收 ${got} 件${skipped?' · 另有 '+skipped+' 件类型不支持':''}`;
+  setMode('unmask');
+  if(errs.length)$('#upErr').textContent='有 '+errs.length+' 件没进来：'+errs.slice(0,2).join('；');
 }
+/** 拖进来的项：文件夹给 entry，普通文件给 File；必须在 drop 事件里同步取，异步就失效了。 */
+function dropItems(e){
+  const out=[],its=e.dataTransfer&&e.dataTransfer.items;
+  if(its&&its.length){
+    for(const it of its){
+      const entry=it.webkitGetAsEntry?it.webkitGetAsEntry():null;
+      if(entry){out.push({entry});continue}
+      const f=it.kind==='file'&&it.getAsFile?it.getAsFile():null;
+      if(f)out.push({file:f,path:f.name});
+    }
+    return out;
+  }
+  return [...(e.dataTransfer&&e.dataTransfer.files||[])].map(f=>({file:f,path:f.name}));
+}
+const readBatch=rd=>new Promise((res,rej)=>rd.readEntries(res,rej));
+/** 把文件夹树摊平成文件列表；点开头的（.git、.mccbak 之类）和系统缩略图不收。 */
+async function flatten(node,prefix,acc){
+  if(node.isFile){
+    if(node.name.startsWith('.')||/^(thumbs\.db|desktop\.ini)$/i.test(node.name))return;
+    if(acc.length>=MAX_DROP_FILES)return;
+    acc.push({node,path:prefix+node.name});
+  }else if(node.isDirectory){
+    if(node.name.startsWith('.')||acc.length>=MAX_DROP_FILES)return;
+    const rd=node.createReader();
+    for(let batch=await readBatch(rd);batch&&batch.length;batch=await readBatch(rd)){
+      for(const c of batch)await flatten(c,prefix+node.name+'/',acc);
+      if(acc.length>=MAX_DROP_FILES)break;
+    }
+  }
+}
+async function filesOf(list){
+  const out=[];
+  for(const it of list){
+    if(it.file){out.push({file:it.file,path:it.path});continue}
+    const acc=[];await flatten(it.entry,'',acc);
+    for(const a of acc){
+      const f=await new Promise((res,rej)=>a.node.file(res,rej));
+      out.push({file:f,path:a.path});
+    }
+  }
+  return out;
+}
+function hasFiles(e){const t=e.dataTransfer&&e.dataTransfer.types;return !!t&&[...t].includes('Files')}
+let dragDepth=0;
+const veil=$('#veil');
+function showVeil(e){
+  const n=e.dataTransfer&&e.dataTransfer.items?e.dataTransfer.items.length:0;
+  $('#veilN').textContent=n?'这次拖了 '+n+' 项，文件夹会展开里面的文件':'';
+  veil.classList.add('on');$('#drop').classList.add('hot');
+}
+function hideVeil(){veil.classList.remove('on');$('#drop').classList.remove('hot')}
+document.addEventListener('dragenter',e=>{if(!unlocked||!hasFiles(e))return;e.preventDefault();dragDepth++;showVeil(e)});
+document.addEventListener('dragover',e=>{if(!unlocked||!hasFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy'});
+document.addEventListener('dragleave',e=>{if(!hasFiles(e))return;dragDepth=Math.max(0,dragDepth-1);if(!dragDepth)hideVeil()});
+document.addEventListener('drop',async e=>{
+  if(!hasFiles(e))return;
+  e.preventDefault();dragDepth=0;hideVeil();
+  if(!unlocked){$('#gateErr').textContent='先解锁码本，再拖文件进来';return}
+  try{await upload(await filesOf(dropItems(e)))}
+  catch(err){$('#upErr').textContent='拖进来的文件读不了：'+err.message}
+});
+const drop=$('#drop');
+drop.onclick=e=>{if(e.target.closest('button'))return;$('#file').click()};
+$('#pickFile').onclick=()=>$('#file').click();
+$('#pickDir').onclick=()=>$('#dirFile').click();
+$('#file').onchange=e=>upload([...e.target.files].map(f=>({file:f,path:f.name})));
+$('#dirFile').onchange=e=>upload([...e.target.files]
+  .map(f=>({file:f,path:(f.webkitRelativePath||f.name)})));
 function setMode(m){
   mode=m;$$('[data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode===m));
   $('#runLabel').textContent=MODE[m].label;$('#modeHint').innerHTML=MODE[m].note;
@@ -712,14 +833,14 @@ $('#pkUp').onclick=()=>pkLoad($('#pkUp').dataset.p||'');
 $('#pkGo').onclick=()=>pkLoad($('#pkInput').value.trim());
 $('#pkInput').onkeydown=e=>{if(e.key==='Enter')pkLoad($('#pkInput').value.trim())};
 $('#pkOk').onclick=async()=>{
-  try{await post('/api/root',{path:pkPath});$('#picker').classList.add('hide');dir='';page=1;await refreshState();$('#runInfo').textContent='工作目录已切换'}
+  try{await post('/api/root',{path:pkPath});$('#picker').classList.add('hide');dir='';deep=false;page=1;await refreshState();$('#runInfo').textContent='工作目录已切换'}
   catch(e){$('#upErr').textContent=e.message}
 };
 $('#refreshBtn').onclick=async()=>{
   try{await loadList();await loadPairs()}catch(e){await refreshState()}
 };
-$('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');dir=i<0?'':dir.slice(0,i);loadList()};
-$('#uplandBtn').onclick=()=>{dir=UPLOAD_DIR;loadList()};
+$('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');go(i<0?'':dir.slice(0,i),false)};
+$('#uplandBtn').onclick=()=>go(UPLOAD_DIR,false);
 $('#onlySupported').onchange=loadList;$('#filter').oninput=loadList;
 $('#pSearch').onclick=()=>{page=1;loadPairs()};
 $('#clearQ').onclick=()=>{$('#pq').value='';page=1;loadPairs()};
@@ -753,12 +874,6 @@ async function lookup(rev){
       : '<span style="color:var(--warn)">不在码本里，可能被 AI 改写、翻译或截断过</span>';
   }catch(e){$('#lkOut').innerHTML='<span style="color:#ff9fb0">'+esc(e.message)+'</span>'}
 }
-const drop=$('#drop');
-drop.onclick=()=>$('#file').click();
-drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot')};
-drop.ondragleave=()=>drop.classList.remove('hot');
-drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot');upload([...e.dataTransfer.files])};
-$('#file').onchange=e=>upload([...e.target.files]);
 addEventListener('focus',async()=>{        // 在资源管理器里删完文件切回来，列表/对照表自动跟上
   if(!unlocked)return;
   try{await loadList();await loadPairs()}catch(e){await refreshState()}
