@@ -27,6 +27,8 @@ class ApiHttpTest {
 
     private WebServer server;
     private String base;
+    /** 「打开文件位置」在单测里只记录，不真弹资源管理器。 */
+    private final java.util.List<Path> revealed = new java.util.ArrayList<>();
     private final HttpClient http = HttpClient.newHttpClient();
 
     private record Http(int status, String body, String disposition, byte[] raw) {
@@ -43,6 +45,7 @@ class ApiHttpTest {
         Files.writeString(root.resolve("名单.txt"), "司机 320501199001011234 已登记\n");
         Api api = new Api(new Workspace(root), new Session(30 * 60_000),
                 root.resolve("mb").toString(), RuleTable.defaultTable());
+        api.setRevealAction(revealed::add);
         server = new WebServer(0, api);
         server.start();
         base = "http://127.0.0.1:" + server.port();
@@ -188,6 +191,42 @@ class ApiHttpTest {
         assertTrue(run.has("\"hits\":1"), run.body);
         assertTrue(Files.readString(root.resolve(".mcc-upload/AI产物/三月/反馈.restored.md"))
                 .contains("13800001111"), "子目录里的产物也要能还原");
+    }
+
+    @Test
+    void 新脱敏的映射要排在最前_刷新一眼就能看到() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令新\"}");
+        StringBuilder big = new StringBuilder("手机\n");
+        for (int i = 0; i < 250; i++) {
+            big.append("1380000").append(String.format("%04d", i)).append('\n');   // 先灌满 250 条，超过一页
+        }
+        Files.writeString(root.resolve("大批量.csv"), big.toString());
+        post("/api/run", "{\"mode\":\"mask\",\"files\":[\"大批量.csv\"]}");
+        Http first = get("/api/pairs?page=1");
+        assertTrue(first.has("\"total\":250"), first.body);
+
+        // 再脱一件新文件 → 新映射必须出现在第 1 页（此前它排在最后一页，看着像"没刷新"）
+        Files.writeString(root.resolve("新单.txt"), "客户 13911112222 下单\n");
+        post("/api/run", "{\"mode\":\"mask\",\"files\":[\"新单.txt\"]}");
+        Http p1 = get("/api/pairs?page=1");
+        assertTrue(p1.has("13911112222"), "新映射没出现在第 1 页: " + p1.body());
+        assertTrue(p1.has("\"fresh\":1"), "要标出哪几条是本次新增: " + p1.body());
+        Http last = get("/api/pairs?page=2");
+        assertFalse(last.has("\"fresh\":true"), "本次新增只标新脱的那一条，不该串到第 2 页");
+    }
+
+    @Test
+    void 打开文件位置只认工作目录内的路径() throws Exception {
+        post("/api/book/new", "{\"pass\":\"口令开\"}");
+        post("/api/run", "{\"mode\":\"mask\",\"files\":[\"台账.csv\"]}");
+        assertEquals(200, post("/api/reveal", "{\"path\":\"台账.masked.csv\"}").status);
+        assertTrue(revealed.contains(root.resolve("台账.masked.csv").toAbsolutePath().normalize()),
+                revealed.toString());
+        Http out = post("/api/reveal", "{\"path\":\"../Windows\"}");
+        assertEquals(400, out.status, out.body);
+        assertTrue(out.has("越") || out.has("相对路径"), out.body);
+        assertEquals(400, post("/api/reveal", "{\"path\":\"没这个文件.csv\"}").status);
+        assertEquals(1, revealed.size(), "被拒的路径不能真去开: " + revealed);
     }
 
     @Test

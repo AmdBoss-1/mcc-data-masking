@@ -143,7 +143,7 @@ input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,185,90,.14)}
   border-radius:999px;background:var(--gold-soft);border:1px solid rgba(240,185,90,.28);color:var(--gold-2);font-size:11.5px}
 .path .deeptag button{height:20px;padding:0;color:var(--gold-2);font-size:11.5px;text-decoration:underline}
 .tools{display:flex;align-items:center;gap:8px;padding:11px 15px 12px;border-bottom:1px solid var(--line-2)}
-.tools .grow{flex:1;min-width:120px}
+.tools .grow{flex:1;min-width:96px}
 .tablewrap{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
 table.grid{width:100%;border-collapse:separate;border-spacing:0}
 table.grid th{position:sticky;top:0;z-index:1;text-align:left;font-size:11.5px;font-weight:500;color:var(--t4);
@@ -169,6 +169,7 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .blank svg{width:30px;height:30px;margin:0 auto 10px;opacity:.55}
 .selbar{display:flex;align-items:center;gap:10px;padding:10px 15px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--t3)}
 .selbar b{color:var(--gold-2);font-weight:650}
+.selbar #selInfo{white-space:nowrap;flex:none}
 .selbar .grow{flex:1}
 
 /* 执行区 */
@@ -206,7 +207,7 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .res .hits b{color:var(--gold-2);font-weight:650}
 .res .why{font-size:12px;color:#ff9fb0;margin-top:3px;line-height:1.6}
 .res .note{font-size:11.5px;color:var(--warn);margin-top:4px;line-height:1.6}
-.res .ops{display:flex;gap:6px;margin-top:8px}
+.res .ops{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .drop{margin-top:12px;flex:1;min-height:150px;border-radius:11px;text-align:center;color:var(--t3);font-size:12.5px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;
   border:1.5px dashed rgba(255,255,255,.2);background:var(--panel-2);cursor:pointer;transition:.18s var(--ease)}
@@ -216,6 +217,8 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .drop.hot{border-color:var(--gold);border-style:solid;color:var(--gold-2);background:var(--gold-soft)}
 .drop svg{width:30px;height:30px;stroke:currentColor;flex:none;opacity:.8}
 .drop .pickline{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.drop .droppath{font-size:11.5px;color:var(--t4);max-width:100%}
+.drop .droppath b{color:var(--t3);font-weight:400;word-break:break-all}
 /* 拖拽遮罩：整个工作台都是上传口，不必瞄准那一小块 */
 .veil{position:fixed;inset:0;z-index:38;display:none;align-items:center;justify-content:center;
   background:rgba(11,8,4,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:24px}
@@ -240,6 +243,8 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
 .pane-audit #view-pairs{display:flex;flex-direction:column;flex:1;min-height:0}
 .scopenote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 15px;font-size:12px;
   color:var(--warn);background:rgba(255,193,122,.08);border-bottom:1px solid rgba(255,193,122,.2)}
+#pairs tr.freshrow td{background:rgba(240,185,90,.075)}
+#pairs tr.freshrow:hover td{background:rgba(240,185,90,.12)}
 .pane-audit .search{display:flex;gap:8px;padding:12px 15px 10px}
 .pane-audit .search input{flex:1}
 .auditwrap{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 15px}
@@ -347,7 +352,9 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
       <button class="quiet pathbtn" id="rootBtn" title="点这里换一个工作目录">
         <span class="mono" id="rootPath"></span>
         <svg class="i s" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
-      </button></header>
+      </button>
+      <button class="quiet" id="revealBtn" title="在资源管理器里打开当前这个目录"><svg class="i s" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 16v-5m0 0 2 2m-2-2-2 2"/></svg></button>
+    </header>
     <nav class="path" id="crumb" aria-label="目录路径"></nav>
     <div class="tools">
       <button class="quiet" id="upBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg>上级</button>
@@ -382,6 +389,7 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
         <span class="grow"></span>
         <button class="quiet" id="zipBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 18h14"/></svg>打包下载</button>
         <button class="quiet" id="cpAllBtn"><svg class="i s" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>复制路径</button>
+        <button class="quiet" id="resOpenBtn"><svg class="i s" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 16v-5m0 0 2 2m-2-2-2 2"/></svg>打开位置</button>
       </div>
       <div class="results" id="results"></div>
       <div class="drop" id="drop" title="文件和文件夹都能拖进来（整个页面都能接），或点这里选文件">
@@ -391,7 +399,9 @@ tr.dir:hover .txt{text-decoration:underline;text-underline-offset:3px}
         <span class="pickline">
           <button class="quiet" id="pickFile">选择文件</button>
           <button class="quiet" id="pickDir">选择文件夹</button>
+          <button class="quiet" id="revealUpload">打开这个文件夹</button>
         </span>
+        <span class="droppath">落在本机：<b id="upPath" class="mono">…</b></span>
         <span class="chip">单件 ≤512MB · 一次 ≤300 件</span>
       </div>
       <input type="file" id="file" class="hide" multiple>
@@ -487,6 +497,7 @@ async function refreshState(){
   try{
     const s=await api('/api/state');unlocked=s.unlocked;
     $('#rootPath').textContent=s.root;$('#ver').textContent='v'+s.version;
+    $('#upPath').textContent=s.root.replace(/[\\/]+$/,'')+(s.root.includes('\\')?'\\':'/')+UPLOAD_DIR;
     const b=$('#bookBadge');
     b.className='status'+(unlocked?' on':'');
     b.innerHTML='<span class="bead"></span>'+(unlocked?`已解锁 · ${s.mapped} 条映射 · 经手 ${s.files.length} 件`:'未解锁');
@@ -557,17 +568,20 @@ async function loadPairs(){
   const chainTip=j.chained>0
     ? `<span style="color:var(--warn)">其中 ${j.chained} 条是链式脏映射（脱敏产物又被脱了一遍）</span>
        <span style="color:var(--t4)">删掉对应的 <b>.masked.masked.*</b> 文件 → 点「刷新」即可清掉</span>` : '';
-  note.classList.toggle('hide',!(scopeAll||j.hidden>0||j.chained>0));
+  const freshTip=j.fresh>0
+    ? `<span style="color:var(--gold-2)">本次新增 ${j.fresh} 条</span><span style="color:var(--t4)">已排在最前，标了底色</span>` : '';
+  note.classList.toggle('hide',!(scopeAll||j.hidden>0||j.chained>0||j.fresh>0));
   note.innerHTML=(scopeAll
     ? `<span style="color:var(--t4)">当前显示全部映射（含产物已删的）</span>
        <button class="text" id="scopeBtn" style="margin-left:6px">只看在档</button>`
     : (j.hidden>0
       ? `<span style="color:var(--warn)">另有 ${j.hidden} 条的产物已不在工作目录</span>
          <button class="text" id="scopeBtn" style="margin-left:6px">显示全部</button>`
-      : '')) + (chainTip?`<span style="flex-basis:100%"></span>`+chainTip:'');
+      : '')) + (chainTip?`<span style="flex-basis:100%"></span>`+chainTip:'')
+    + (freshTip?`<span style="flex-basis:100%"></span>`+freshTip:'');
   const sb=$('#scopeBtn');
   if(sb)sb.onclick=()=>{scopeAll=!scopeAll;page=1;loadPairs()};
-  $('#pairs').innerHTML=j.rows.map(r=>`<tr><td><span class="chip gold">${esc(r.rule)}</span>${r.chained?'<span class="chip bad" title="脱敏产物又被脱了一遍留下的脏映射">链式</span>':''}</td>
+  $('#pairs').innerHTML=j.rows.map(r=>`<tr${r.fresh?' class="freshrow"':''}><td><span class="chip gold">${esc(r.rule)}</span>${r.chained?'<span class="chip bad" title="脱敏产物又被脱了一遍留下的脏映射">链式</span>':''}${r.fresh?'<span class="chip" title="这次刚脱出来的">本次</span>':''}</td>
       <td class="nm"><span class="wrap"><span class="txt" title="${esc(r.orig)}">${esc(r.orig)}</span></span></td>
       <td class="nm"><span class="wrap"><span class="txt" style="color:var(--gold-2)" title="${esc(r.fake)}">${esc(r.fake)}</span></span></td>
       <td><button class="quiet" style="width:28px;padding:0" data-cp="${esc(r.orig)}" title="复制原值" aria-label="复制原值">${ICON.copy}</button></td></tr>`).join('')
@@ -610,15 +624,18 @@ async function run(){
           <div class="hits">替换 <b>${r.hits}</b> 处</div>
           ${(r.warnings||[]).map(w=>`<div class="note">${esc(w)}</div>`).join('')}
           <div class="ops"><a class="act quiet" href="/file?path=${encodeURIComponent(r.out)}" download>${ICON.down}下载产物</a>
-            <button class="quiet" data-copy="${esc(r.out)}">${ICON.copy}复制路径</button></div>
+            <button class="quiet" data-copy="${esc(r.out)}">${ICON.copy}复制路径</button>
+            <button class="quiet" data-reveal="${esc(r.out)}" title="在资源管理器里打开并选中这个产物">${ICON.folder}打开</button></div>
         </div></article>`
     : `<article class="res bad" style="animation:rise .32s var(--ease) both;animation-delay:${i*36}ms">
         <span class="rsel"></span><span class="dot"></span><div class="lines">
           <div class="f">${esc(r.file)}</div><div class="why">${esc(r.error||'未知错误')}</div></div></article>`).join('');
   $$('#results [data-copy]').forEach(b=>b.onclick=async e=>{e.stopPropagation();
     const how=await copyText(absPath(b.dataset.copy));b.textContent=how==='manual'?'手动复制':'已复制'});
+  $$('#results [data-reveal]').forEach(b=>b.onclick=e=>{e.stopPropagation();reveal(b.dataset.reveal)});
   bindResults();
   btn.disabled=false;btn.querySelector('svg').classList.remove('spin');
+  page=1;                       // 新映射排在最前，别停在原来那一页看不到
   await loadPairs();await refreshState();
 }
 const MAX_DROP_FILES=300, BATCH_BYTES=24*1024*1024, BATCH_N=40;
@@ -699,6 +716,7 @@ const veil=$('#veil');
 function showVeil(e){
   const n=e.dataTransfer&&e.dataTransfer.items?e.dataTransfer.items.length:0;
   $('#veilN').textContent=n?'这次拖了 '+n+' 项，文件夹会展开里面的文件':'';
+  veil.querySelector('.to').textContent='落到 '+absPath(UPLOAD_DIR)+'（只在这台机器上）';
   veil.classList.add('on');$('#drop').classList.add('hot');
 }
 function hideVeil(){veil.classList.remove('on');$('#drop').classList.remove('hot')}
@@ -789,6 +807,11 @@ const absPath=rel=>{
   const sep=root.includes('\\')?'\\':'/';
   return root+sep+rel.replace(/\//g,sep);
 };
+/** 让本机资源管理器打开这个位置（文件会选中它）；空串 = 工作目录本身。 */
+async function reveal(rel){
+  try{await post('/api/reveal',{path:rel||''})}
+  catch(e){$('#upErr').textContent=e.message}
+}
 
 /* ---------- 事件 ---------- */
 $$('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('[data-tab]').forEach(x=>x.classList.toggle('on',x===b));
@@ -841,6 +864,13 @@ $('#refreshBtn').onclick=async()=>{
 };
 $('#upBtn').onclick=()=>{const i=dir.lastIndexOf('/');go(i<0?'':dir.slice(0,i),false)};
 $('#uplandBtn').onclick=()=>go(UPLOAD_DIR,false);
+$('#revealBtn').onclick=()=>reveal(dir);
+$('#revealUpload').onclick=()=>reveal(UPLOAD_DIR);
+$('#resOpenBtn').onclick=()=>{
+  const c=$$('.rchk:checked').map(x=>x.value);
+  if(!c.length){$('#runInfo').textContent='先勾选产物';return}
+  const i=c[0].lastIndexOf('/');reveal(i<0?'':c[0].slice(0,i));
+};
 $('#onlySupported').onchange=loadList;$('#filter').oninput=loadList;
 $('#pSearch').onclick=()=>{page=1;loadPairs()};
 $('#clearQ').onclick=()=>{$('#pq').value='';page=1;loadPairs()};

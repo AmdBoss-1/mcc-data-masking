@@ -10,6 +10,7 @@ import com.mcc.mask.rw.Rw;
 import com.mcc.mask.rw.RwFactory;
 import com.mcc.mask.rules.RuleTable;
 import com.mcc.mask.scan.TextScanner;
+import com.mcc.mask.util.DesktopReveal;
 import com.mcc.mask.util.Paths0;
 import com.mcc.mask.util.Summary;
 
@@ -51,6 +52,14 @@ public final class Api {
     private final ObjectMapper om = new ObjectMapper();
     private final String bookDir;
     private final RuleTable rules;
+    /** 最近一次脱敏产出的产物（对照表据此标「本次」）。 */
+    private volatile List<String> lastProducts = List.of();
+    /** 「打开文件位置」的动作；单测里换成记录器，别真弹资源管理器。 */
+    private java.util.function.Consumer<Path> revealAction = DesktopReveal::open;
+
+    public void setRevealAction(java.util.function.Consumer<Path> action) {
+        this.revealAction = action;
+    }
 
     public Api(Workspace ws, Session session, String bookDir, RuleTable rules) {
         this.ws = ws;
@@ -94,6 +103,7 @@ public final class Api {
             case "/api/pairs" -> pairs(query);
             case "/api/export/pairs" -> exportPairs(query);
             case "/api/download-zip" -> zip(body);
+            case "/api/reveal" -> reveal(body);
             case "/api/lookup" -> lookup(body);
             case "/api/upload" -> upload(body, contentType);
             case "/file" -> file(query.get("path"));
@@ -292,6 +302,7 @@ public final class Api {
         Path file = session.bookFile();
         char[] pass = session.pass();
         List<Map<String, Object>> results = new ArrayList<>();
+        List<String> products = new ArrayList<>();
         int done = 0;
         for (JsonNode f : files) {
             String rel = f.asText();
@@ -318,12 +329,18 @@ public final class Api {
                 r.put("out", ws.relativize(out));
                 r.put("warnings", sum.credentialWarnings());
                 r.put("notes", sum.lines());
+                if (mode.equals("mask")) {
+                    products.add(ws.relativize(out));
+                }
                 done++;
             } catch (MaskException e) {
                 r.put("ok", false);
                 r.put("error", e.getMessage());
             }
             results.add(r);
+        }
+        if (mode.equals("mask")) {
+            lastProducts = List.copyOf(products);
         }
         return Resp.json(200, ok(Map.of("mode", mode, "results", results,
                 "succeeded", done, "failed", results.size() - done,
@@ -339,11 +356,28 @@ public final class Api {
     /**
      * 对照表跟随产物：码本里记了 byFile（哪个产物用了哪些映射）时，只显示产物仍在工作目录的映射；
      * 老码本没有归属信息（byFile 空）则全部显示，免得历史数据凭空消失。
+     * 顺序按"最近用的产物在前"——byFile 是插入序，最后写入的产物排最前，刚脱完的映射刷新即在第 1 页。
      */
     private Map<String, Object> pairsJson(String q, int page, boolean showAll) {
         String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-        Map<String, java.util.List<String>> byFile = session.book().json().byFile;
+        Codebook book = session.book();
+        Map<String, java.util.List<String>> byFile = book.json().byFile;
         java.util.Set<String> visible = null;
+        Map<String, Integer> rank = new java.util.HashMap<>();
+        int idx = 0;
+        for (Map.Entry<String, java.util.List<String>> e : byFile.entrySet()) {
+            idx++;
+            for (String key : e.getValue()) {
+                rank.merge(key, idx, Math::max);
+            }
+        }
+        java.util.Set<String> freshKeys = new java.util.HashSet<>();
+        for (String product : lastProducts) {
+            java.util.List<String> keys = byFile.get(product);
+            if (keys != null) {
+                freshKeys.addAll(keys);
+            }
+        }
         if (!showAll && !byFile.isEmpty()) {
             visible = new java.util.HashSet<>();
             for (Map.Entry<String, java.util.List<String>> e : byFile.entrySet()) {
@@ -354,16 +388,18 @@ public final class Api {
         }
         // 链式判定：本条的假值又被当成"原值"脱过第二次（脱敏产物再脱一遍留下的脏数据）
         java.util.Set<String> allOrigs = new java.util.HashSet<>();
-        for (Map<String, String> m : session.book().maps().values()) {
+        for (Map<String, String> m : book.maps().values()) {
             allOrigs.addAll(m.keySet());
         }
         List<Map<String, Object>> all = new ArrayList<>();
         int hidden = 0;
         int chained = 0;
-        for (Map.Entry<String, Map<String, String>> byRule : session.book().maps().entrySet()) {
+        int fresh = 0;
+        for (Map.Entry<String, Map<String, String>> byRule : book.maps().entrySet()) {
             for (Map.Entry<String, String> e : byRule.getValue().entrySet()) {
                 boolean isChained = allOrigs.contains(e.getValue());
-                if (visible != null && !visible.contains(byRule.getKey() + "\u0001" + e.getKey())) {
+                String key = byRule.getKey() + "\u0001" + e.getKey();
+                if (visible != null && !visible.contains(key)) {
                     hidden++;
                     continue;
                 }
@@ -375,20 +411,28 @@ public final class Api {
                         && !e.getValue().toLowerCase(Locale.ROOT).contains(needle)) {
                     continue;
                 }
+                boolean isFresh = freshKeys.contains(key);
+                if (isFresh) {
+                    fresh++;
+                }
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("rule", byRule.getKey());
                 row.put("orig", e.getKey());
                 row.put("fake", e.getValue());
                 row.put("chained", isChained);
+                row.put("fresh", isFresh);
                 all.add(row);
             }
         }
+        all.sort(java.util.Comparator.comparingInt(
+                r -> -rank.getOrDefault(r.get("rule") + "\u0001" + r.get("orig"), 0)));
         int from = Math.min((page - 1) * PAGE, all.size());
         int to = Math.min(from + PAGE, all.size());
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("total", all.size());
         m.put("hidden", hidden);
         m.put("chained", chained);
+        m.put("fresh", fresh);
         m.put("scoped", visible != null);
         m.put("page", page);
         m.put("pageSize", PAGE);
@@ -508,8 +552,24 @@ public final class Api {
         return file.fileName();
     }
 
-    /** 打包下载：把选中的产物打成 zip（浏览器一次只弹一个保存框，选中多个也不烦）。 */
-    private Resp zip(byte[] body) {
+    /**
+     * 在资源管理器里打开这个路径（文件会选中它，目录直接打开）。
+     * 只接受工作目录内的相对路径（越界由 Workspace.resolve 拒），空串表示工作目录本身。
+     */
+    private Resp reveal(byte[] body) {
+        requireUnlock();
+        JsonNode j = parse(body);
+        String rel = j.path("path").asText("");
+        Path p = ws.resolve(rel).toAbsolutePath().normalize();
+        if (!Files.exists(p)) {
+            throw new MaskException("路径不存在，可能已经被删掉了: " + rel);
+        }
+        revealAction.accept(p);
+        return Resp.json(200, ok(Map.of("path", p.toString(),
+                "dir", (Files.isDirectory(p) ? p : p.getParent()).toString())), om);
+    }
+
+    /** 打包下载：把选中的产物打成 zip（浏览器一次只弹一个保存框，选中多个也不烦）。 */    private Resp zip(byte[] body) {
         requireUnlock();
         JsonNode j = parse(body);
         JsonNode paths = j.path("paths");
