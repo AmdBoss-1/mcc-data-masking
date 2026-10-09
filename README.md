@@ -1,11 +1,11 @@
-# MCC Data Masking Tool / MCC 数据脱敏工具
+# AI Local Data Masking Tool / AI 本地数据脱敏工具
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/java-8+-orange.svg)](https://openjdk.java.net/)
 
-A privacy-first data masking tool that keeps codebooks local and works fully offline. Supports 10+ file formats including Excel, CSV, JSON, XML, and more.
+A privacy-first data masking tool designed for AI workflows. Keeps codebooks 100% local, works fully offline, and supports reversible masking for safe AI analysis. Supports 10+ file formats (Excel, CSV, JSON, XML, etc.).
 
-一款**离线优先**的数据脱敏工具，码本完全本地存储，支持 10+ 种文件格式（Excel/CSV/JSON/XML 等）。
+专为 **AI 工作流设计**的本地数据脱敏工具——码本不上云、完全离线、可逆脱敏，让 AI 安全分析敏感数据。支持 10+ 种文件格式（Excel/CSV/JSON/XML 等）。
 
 ## ✨ Features / 特性
 
