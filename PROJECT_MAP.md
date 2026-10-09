@@ -36,7 +36,7 @@ java -jar dist/mcc-mask.jar serve --root D:\台账 --port 8098 --open
 - 换工作目录走文件区右上角的**目录选择器**（拖文件夹做不到：浏览器不把拖入项的真实磁盘路径交给网页），码本不跟着换
 - 零外链：页面打进 jar，断网可用；口令只在服务端内存，刷新页面即锁
 - 三栏各自内滚（文件清单 / 执行结果 / 对照表），页面本身不滚；内容变长会撑破面板这类坑由 `ai\.tools\uitest\mask-web-scroll.mjs`（400 条映射 + 250 文件夹具，18 项断言）守着；全流程回归是 `mask-web-e2e.mjs`（69 项），排版测量是 `mask-web-shots.mjs`（四视口）
-- 实测截图：`docs/verify/*.png`（19 张，含错口令 / 不支持格式 / 刷新即锁三个错误态 + 拖文件遮罩 / 拖入文件夹 / 整批还原 / 本次新增与打开位置 / 内滚回归）
+- 实测截图：`docs/verify/*.png`（20 张，含错口令 / 不支持格式 / 刷新即锁三个错误态 + 拖文件遮罩 / 拖入文件夹 / 整批还原 / 本次新增与打开位置 / 内滚回归 / 投放区精简）
 
 ## 能力与已知边界
 
@@ -62,6 +62,6 @@ MCC脱敏工具/
 ├─ src/test/java/...          ← 71 项测试（引擎 49 + web 22：Workspace/Session/ApiHttp/ServeSmoke）
 ├─ src/test/resources/sample.doc           ← .doc 夹具（Word COM 生成的纯假数据）
 ├─ tools/build.ps1            ← 打包脚本
-├─ docs/verify/*.png          ← 控制台无头浏览器实测截图（19 张，含三个错误态 + 拖拽 / 打开位置 / 内滚）
+├─ docs/verify/*.png          ← 控制台无头浏览器实测截图（20 张，含三个错误态 + 拖拽 / 打开位置 / 内滚 / 精简）
 └─ docs/log/变更日志.md        ← 项目级记账（设计文档正本在群级 08-项目设计）
 ```
